@@ -1,0 +1,379 @@
+<!-- =====================================================================
+  Filterable Google Sheet Table — embeddable snippet
+  ---------------------------------------------------------------------
+  HOW TO USE:
+  1. In Google Sheets: File → Share → Publish to web → select your sheet
+     tab → format "Comma-separated values (.csv)" → Publish. Copy the URL.
+  2. Paste that URL into SHEET_CSV_URL below.
+  3. Paste this entire block into a WordPress "Custom HTML" block.
+===================================================================== -->
+
+<div id="fst-root" class="fst-wrap">
+  <div id="fst-filters" class="fst-filters"></div>
+  <div class="fst-meta">
+    <span id="fst-count"></span>
+    <button id="fst-reset" class="fst-reset" type="button">Clear filters</button>
+  </div>
+  <div class="fst-table-scroll">
+    <table id="fst-table" class="fst-table">
+      <thead id="fst-thead"></thead>
+      <tbody id="fst-tbody"></tbody>
+    </table>
+  </div>
+  <div id="fst-empty" class="fst-empty" hidden>No rows match the current filters.</div>
+</div>
+
+<style>
+  .fst-wrap {
+    --fst-ink: #1c2024;
+    --fst-muted: #6b7280;
+    --fst-line: #e3e6ea;
+    --fst-accent: #2f6f4f;
+    --fst-accent-bg: #eaf3ee;
+    --fst-bg-head: #f7f8f9;
+    /* <!-- ADJUST DROPDOWN CORNER ROUNDING HERE --> */
+    --fst-radius: 8px; 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--fst-ink);
+    font-size: 14px;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .fst-wrap *, .fst-wrap *::before, .fst-wrap *::after { box-sizing: border-box; }
+
+  .fst-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .fst-filter {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 160px;
+  }
+  .fst-filter label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--fst-muted);
+  }
+  .fst-filter select, .fst-filter input {
+    font-size: 14px;
+    padding: 7px 10px;
+    border: 1px solid var(--fst-line);
+    border-radius: var(--fst-radius);
+    background: #fff;
+    color: var(--fst-ink);
+    min-width: 160px;
+  }
+  .fst-filter select:focus, .fst-filter input:focus {
+    outline: 2px solid var(--fst-accent);
+    outline-offset: 1px;
+  }
+
+  .fst-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    color: var(--fst-muted);
+    font-size: 13px;
+  }
+  .fst-reset {
+    border: 1px solid var(--fst-line);
+    background: #fff;
+    color: var(--fst-ink);
+    border-radius: var(--fst-radius);
+    padding: 5px 12px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .fst-reset:hover { background: var(--fst-bg-head); }
+
+  .fst-table-scroll {
+    overflow-x: auto;
+    /* <!-- OUTER BORDER REMOVED: Changed to none so the table doesn't have a rounded box container --> */
+    border: none;
+    border-radius: 0;
+  }
+  .fst-table {
+    width: 100%;
+    border-collapse: collapse;
+    white-space: nowrap;
+  }
+  .fst-table th, .fst-table td {
+    padding: 9px 12px;
+    text-align: left;
+    /* <!-- HORIZONTAL ROW LINES: This keeps only the bottom horizontal line visible for each cell --> */
+    border-bottom: 1px solid var(--fst-line);
+  }
+  .fst-table th {
+    background: var(--fst-bg-head);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    cursor: pointer;
+    user-select: none;
+    /* <!-- BOLD HEADER SEPARATOR: This line separates column names from row cells. Adjust '2px' to make it thicker/thinner --> */
+    border-bottom: 2px solid var(--fst-ink);
+  }
+  .fst-table th:hover { background: var(--fst-accent-bg); }
+  .fst-table tbody tr:hover { background: #fafbfc; }
+
+  .fst-empty {
+    padding: 20px;
+    text-align: center;
+    color: var(--fst-muted);
+  }
+
+  .fst-loading {
+    padding: 16px;
+    color: var(--fst-muted);
+  }
+
+  @media (max-width: 600px) {
+    .fst-filter, .fst-filter select, .fst-filter input { min-width: 130px; }
+  }
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script>
+(function () {
+  // ---------- CONFIG: edit these two lines ----------
+  const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ23eH-VC8KZcjNSPUmDudueiZlKWKV8cLwfkvyZj3v4L62U502umL96fhlm3BGOfKcsoYdJ_8ekI9P/pub?gid=0&single=true&output=csv";
+  const FILTER_COLUMNS = []; // e.g. ["category", "status"]
+  // ----------------------------------------------------
+
+  // ---------- COLOR SCALE & CONDITIONAL CONFIGURATION ----------
+  // <!-- CHANGE SCORE GRADIENT COLORS HERE -->
+  const SCORE_COLOR_LOW = { r: 240, g: 244, b: 247 }; // #f0f4f7 (off-white blueish)
+  const SCORE_COLOR_HIGH = { r: 2, g: 35, b: 51 };    // #022333 (deep dark blue)
+
+  // <!-- CHANGE STATUS TEXT COLORS HERE -->
+  const STATUS_COLORS = {
+    "active": "green",
+    "defunct": "red",
+    "acquired": "orange",
+    "merger": "brown"
+  };
+  // --------------------------------------------------------------
+
+  const root = document.getElementById("fst-root");
+  const filtersEl = document.getElementById("fst-filters");
+  const theadEl = document.getElementById("fst-thead");
+  const tbodyEl = document.getElementById("fst-tbody");
+  const countEl = document.getElementById("fst-count");
+  const emptyEl = document.getElementById("fst-empty");
+  const resetBtn = document.getElementById("fst-reset");
+
+  let columns = [];
+  let rows = [];
+  let activeFilters = {};   
+  let sortState = { col: null, dir: 1 };
+  let scoreMin = 0;
+  let scoreMax = 0;
+
+  function loadingMsg(msg) {
+    tbodyEl.innerHTML = `<tr><td class="fst-loading">${msg}</td></tr>`;
+  }
+
+  loadingMsg("Loading data…");
+
+  Papa.parse(SHEET_CSV_URL, {
+    download: true,
+    header: true,
+    skipEmptyLines: true,
+    complete: function (results) {
+      if (!results.data.length) {
+        loadingMsg("No data found in sheet.");
+        return;
+      }
+      columns = results.meta.fields;
+      rows = results.data;
+
+      // Calculate Min and Max scores dynamically from the dataset
+      calculateScoreBounds();
+
+      // <!-- DEFAULT FILTER LOGIC: Set 'status' to 'active' on load if the column exists -->
+      const statusCol = columns.find(c => c.toLowerCase() === "status");
+      if (statusCol) {
+        activeFilters[statusCol] = "active";
+      }
+
+      init();
+    },
+    error: function (err) {
+      loadingMsg("Could not load the sheet. Check that SHEET_CSV_URL is a valid published CSV link.");
+      console.error(err);
+    }
+  });
+
+  function calculateScoreBounds() {
+    const scoreCol = columns.find(c => c.toLowerCase() === "score");
+    if (!scoreCol) return;
+    let values = rows.map(r => parseFloat(r[scoreCol])).filter(v => !isNaN(v));
+    if (values.length) {
+      scoreMin = Math.min(...values);
+      scoreMax = Math.max(...values);
+    }
+  }
+
+  // Helper function to capitalize the first letter of strings
+  function capitalizeFirstLetter(str) {
+    if (!str) return "";
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  function buildFilters() {
+    const filterCols = FILTER_COLUMNS.length ? FILTER_COLUMNS : columns;
+    filtersEl.innerHTML = "";
+    filterCols.forEach(col => {
+      if (!columns.includes(col)) return;
+      const values = Array.from(new Set(rows.map(r => (r[col] ?? "").toString().trim()).filter(v => v !== "")))
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+      const wrap = document.createElement("div");
+      wrap.className = "fst-filter";
+
+      const label = document.createElement("label");
+      // <!-- COLUMN NAME CAPITALIZATION: Transforming dropdown headers to Sentence-case -->
+      label.textContent = capitalizeFirstLetter(col);
+      label.setAttribute("for", "fst-filter-" + col);
+
+      const select = document.createElement("select");
+      select.id = "fst-filter-" + col;
+      select.innerHTML = `<option value="">All</option>` +
+        values.map(v => `<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`).join("");
+
+      // If a default filter was pre-set (like 'active'), select it visually in the UI dropdown
+      if (activeFilters[col]) {
+        select.value = activeFilters[col];
+      }
+
+      select.addEventListener("change", () => {
+        if (select.value) activeFilters[col] = select.value;
+        else delete activeFilters[col];
+        render();
+      });
+
+      wrap.appendChild(label);
+      wrap.appendChild(select);
+      filtersEl.appendChild(wrap);
+    });
+  }
+
+  function buildHeader() {
+    const tr = document.createElement("tr");
+    columns.forEach(col => {
+      const th = document.createElement("th");
+      // <!-- COLUMN NAME CAPITALIZATION: Turning raw CSV row keys (like 'fruit') into 'Fruit' for table view -->
+      th.textContent = capitalizeFirstLetter(col);
+      th.addEventListener("click", () => {
+        sortState = sortState.col === col ? { col, dir: -sortState.dir } : { col, dir: 1 };
+        render();
+      });
+      tr.appendChild(th);
+    });
+    theadEl.innerHTML = "";
+    theadEl.appendChild(tr);
+  }
+
+  function getFilteredRows() {
+    return rows.filter(row =>
+      Object.entries(activeFilters).every(([col, val]) => (row[col] ?? "").toString().trim() === val)
+    );
+  }
+
+  // Computes background color mix based on score sliding scale percentage
+  function getScoreStyle(valStr) {
+    const val = parseFloat(valStr);
+    if (isNaN(val) || scoreMax === scoreMin) return "";
+    
+    // Normalize value to a 0 - 1 factor
+    const factor = (val - scoreMin) / (scoreMax - scoreMin);
+    
+    // Mix low and high RGB profiles
+    const r = Math.round(SCORE_COLOR_LOW.r + factor * (SCORE_COLOR_HIGH.r - SCORE_COLOR_LOW.r));
+    const g = Math.round(SCORE_COLOR_LOW.g + factor * (SCORE_COLOR_HIGH.g - SCORE_COLOR_LOW.g));
+    const b = Math.round(SCORE_COLOR_LOW.b + factor * (SCORE_COLOR_HIGH.b - SCORE_COLOR_LOW.b));
+    
+    // Determine a text color fallback (white text if background is very dark)
+    const textCol = factor > 0.5 ? "#ffffff" : "var(--fst-ink)";
+    
+    return `background-color: rgb(${r},${g},${b}); color: ${textCol}; font-weight: 600;`;
+  }
+
+  function render() {
+    let filtered = getFilteredRows();
+
+    if (sortState.col) {
+      const col = sortState.col, dir = sortState.dir;
+      filtered = filtered.slice().sort((a, b) => {
+        const av = (a[col] ?? "").toString(), bv = (b[col] ?? "").toString();
+        const an = parseFloat(av), bn = parseFloat(bv);
+        if (!isNaN(an) && !isNaN(bn) && av.trim() !== "" && bv.trim() !== "") return (an - bn) * dir;
+        return av.localeCompare(bv, undefined, { numeric: true }) * dir;
+      });
+    }
+
+    tbodyEl.innerHTML = "";
+    if (!filtered.length) {
+      emptyEl.hidden = false;
+    } else {
+      emptyEl.hidden = true;
+      const frag = document.createDocumentFragment();
+      filtered.forEach(row => {
+        const tr = document.createElement("tr");
+        columns.forEach(col => {
+          const td = document.createElement("td");
+          const cellValue = (row[col] ?? "").toString().trim();
+          const normalizedColName = col.toLowerCase();
+
+          // <!-- LINK & CELL RENDERING ENGINE -->
+          // 1. If column is 'score', map background color using our interpolation logic
+          if (normalizedColName === "score") {
+            td.style.cssText = getScoreStyle(cellValue);
+            td.textContent = cellValue;
+          } 
+          // 2. If column is 'status', modify the text color conditionally
+          else if (normalizedColName === "status") {
+            const statusKey = cellValue.toLowerCase();
+            if (STATUS_COLORS[statusKey]) {
+              td.style.cssText = `color: ${STATUS_COLORS[statusKey]}; font-weight: 600;`;
+            }
+            td.textContent = cellValue;
+          }
+          // 3. If cell contains HTML link syntax, parse it safely as standard HTML layout
+          else if (cellValue.toLowerCase().startsWith("<a ") && cellValue.toLowerCase().endsWith("</a>")) {
+            td.innerHTML = cellValue; 
+          } 
+          // 4. Default plain text rendering fallback
+          else {
+            td.textContent = cellValue;
+          }
+
+          tr.appendChild(td);
+        });
+        frag.appendChild(tr);
+      });
+      tbodyEl.appendChild(frag);
+    }
+
+    countEl.textContent = `${filtered.length} of ${rows.length} rows`;
+  }
+
+  resetBtn.addEventListener("click", () => {
+    activeFilters = {};
+    filtersEl.querySelectorAll("select").forEach(s => s.value = "");
+    render();
+  });
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function escapeAttr(s) { return escapeHtml(s); }
+})();
+</script>
