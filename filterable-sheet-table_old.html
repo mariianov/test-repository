@@ -168,20 +168,20 @@
   const countEl = document.getElementById("fst-count");
   const emptyEl = document.getElementById("fst-empty");
   const resetBtn = document.getElementById("fst-reset");
-
+ 
   let columns = [];
   let rows = [];
   let activeFilters = {};   
   let sortState = { col: null, dir: 1 };
   let scoreMin = 0;
   let scoreMax = 0;
-
+ 
   function loadingMsg(msg) {
     tbodyEl.innerHTML = `<tr><td class="fst-loading">${msg}</td></tr>`;
   }
-
+ 
   loadingMsg("Loading data…");
-
+ 
   Papa.parse(SHEET_CSV_URL, {
     download: true,
     header: true,
@@ -193,16 +193,16 @@
       }
       columns = results.meta.fields;
       rows = results.data;
-
+ 
       // Calculate Min and Max scores dynamically from the dataset
       calculateScoreBounds();
-
+ 
       // <!-- DEFAULT FILTER LOGIC: Set 'status' to 'active' on load if the column exists -->
       const statusCol = columns.find(c => c.toLowerCase() === "status");
       if (statusCol) {
         activeFilters[statusCol] = "active";
       }
-
+ 
       init();
     },
     error: function (err) {
@@ -210,7 +210,13 @@
       console.error(err);
     }
   });
-
+ 
+  function init() {
+    buildFilters();
+    buildHeader();
+    render();
+  }
+ 
   function calculateScoreBounds() {
     const scoreCol = columns.find(c => c.toLowerCase() === "score");
     if (!scoreCol) return;
@@ -220,13 +226,13 @@
       scoreMax = Math.max(...values);
     }
   }
-
+ 
   // Helper function to capitalize the first letter of strings
   function capitalizeFirstLetter(str) {
     if (!str) return "";
     return str.charAt(0).toUpperCase() + str.slice(1);
   }
-
+ 
   // Parses a strict markdown-style link: [Label](https://domain.com)
   // Returns { label, url } if it matches, or null otherwise. Only ever used to
   // build a real <a> element from these two extracted values — never via innerHTML.
@@ -235,7 +241,7 @@
     if (!match) return null;
     return { label: match[1], url: match[2] };
   }
-
+ 
   function buildFilters() {
     const filterCols = FILTER_COLUMNS.length ? FILTER_COLUMNS : columns;
     filtersEl.innerHTML = "";
@@ -243,37 +249,37 @@
       if (!columns.includes(col)) return;
       const values = Array.from(new Set(rows.map(r => (r[col] ?? "").toString().trim()).filter(v => v !== "")))
         .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-
+ 
       const wrap = document.createElement("div");
       wrap.className = "fst-filter";
-
+ 
       const label = document.createElement("label");
       // <!-- COLUMN NAME CAPITALIZATION: Transforming dropdown headers to Sentence-case -->
       label.textContent = capitalizeFirstLetter(col);
       label.setAttribute("for", "fst-filter-" + col);
-
+ 
       const select = document.createElement("select");
       select.id = "fst-filter-" + col;
       select.innerHTML = `<option value="">All</option>` +
         values.map(v => `<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`).join("");
-
+ 
       // If a default filter was pre-set (like 'active'), select it visually in the UI dropdown
       if (activeFilters[col]) {
         select.value = activeFilters[col];
       }
-
+ 
       select.addEventListener("change", () => {
         if (select.value) activeFilters[col] = select.value;
         else delete activeFilters[col];
         render();
       });
-
+ 
       wrap.appendChild(label);
       wrap.appendChild(select);
       filtersEl.appendChild(wrap);
     });
   }
-
+ 
   function buildHeader() {
     const tr = document.createElement("tr");
     columns.forEach(col => {
@@ -289,13 +295,13 @@
     theadEl.innerHTML = "";
     theadEl.appendChild(tr);
   }
-
+ 
   function getFilteredRows() {
     return rows.filter(row =>
       Object.entries(activeFilters).every(([col, val]) => (row[col] ?? "").toString().trim() === val)
     );
   }
-
+ 
   // Computes background color mix based on score sliding scale percentage
   function getScoreStyle(valStr) {
     const val = parseFloat(valStr);
@@ -314,10 +320,10 @@
     
     return `background-color: rgb(${r},${g},${b}); color: ${textCol}; font-weight: 600;`;
   }
-
+ 
   function render() {
     let filtered = getFilteredRows();
-
+ 
     if (sortState.col) {
       const col = sortState.col, dir = sortState.dir;
       filtered = filtered.slice().sort((a, b) => {
@@ -327,7 +333,7 @@
         return av.localeCompare(bv, undefined, { numeric: true }) * dir;
       });
     }
-
+ 
     tbodyEl.innerHTML = "";
     if (!filtered.length) {
       emptyEl.hidden = false;
@@ -340,7 +346,7 @@
           const td = document.createElement("td");
           const cellValue = (row[col] ?? "").toString().trim();
           const normalizedColName = col.toLowerCase();
-
+ 
           // <!-- LINK & CELL RENDERING ENGINE -->
           // 1. If column is 'score', map background color using our interpolation logic
           if (normalizedColName === "score") {
@@ -371,23 +377,23 @@
           else {
             td.textContent = cellValue;
           }
-
+ 
           tr.appendChild(td);
         });
         frag.appendChild(tr);
       });
       tbodyEl.appendChild(frag);
     }
-
+ 
     countEl.textContent = `${filtered.length} of ${rows.length} rows`;
   }
-
+ 
   resetBtn.addEventListener("click", () => {
     activeFilters = {};
     filtersEl.querySelectorAll("select").forEach(s => s.value = "");
     render();
   });
-
+ 
   function escapeHtml(s) {
     return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
