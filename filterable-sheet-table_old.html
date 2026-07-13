@@ -5,11 +5,7 @@
   1. In Google Sheets: File → Share → Publish to web → select your sheet
      tab → format "Comma-separated values (.csv)" → Publish. Copy the URL.
   2. Paste that URL into SHEET_CSV_URL below.
-  3. Paste this entire block into a WordPress "Custom HTML" block
-     (or a Code widget / footer script depending on your theme).
-  4. Optional: edit FILTER_COLUMNS to choose which columns get a filter
-     dropdown. Leave as an empty array [] to auto-generate one filter
-     per column.
+  3. Paste this entire block into a WordPress "Custom HTML" block.
 ===================================================================== -->
 
 <div id="fst-root" class="fst-wrap">
@@ -35,7 +31,8 @@
     --fst-accent: #2f6f4f;
     --fst-accent-bg: #eaf3ee;
     --fst-bg-head: #f7f8f9;
-    --fst-radius: 8px;
+    /* <!-- ADJUST DROPDOWN CORNER ROUNDING HERE --> */
+    --fst-radius: 8px; 
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     color: var(--fst-ink);
     font-size: 14px;
@@ -98,8 +95,9 @@
 
   .fst-table-scroll {
     overflow-x: auto;
-    border: 1px solid var(--fst-line);
-    border-radius: var(--fst-radius);
+    /* <!-- OUTER BORDER REMOVED: Changed to none so the table doesn't have a rounded box container --> */
+    border: none;
+    border-radius: 0;
   }
   .fst-table {
     width: 100%;
@@ -109,6 +107,7 @@
   .fst-table th, .fst-table td {
     padding: 9px 12px;
     text-align: left;
+    /* <!-- HORIZONTAL ROW LINES: This keeps only the bottom horizontal line visible for each cell --> */
     border-bottom: 1px solid var(--fst-line);
   }
   .fst-table th {
@@ -118,10 +117,11 @@
     top: 0;
     cursor: pointer;
     user-select: none;
+    /* <!-- BOLD HEADER SEPARATOR: This line separates column names from row cells. Adjust '2px' to make it thicker/thinner --> */
+    border-bottom: 2px solid var(--fst-ink);
   }
   .fst-table th:hover { background: var(--fst-accent-bg); }
   .fst-table tbody tr:hover { background: #fafbfc; }
-  .fst-table tbody tr:last-child td { border-bottom: none; }
 
   .fst-empty {
     padding: 20px;
@@ -143,9 +143,23 @@
 <script>
 (function () {
   // ---------- CONFIG: edit these two lines ----------
-  const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ23eH-VC8KZcjNSPUmDudueiZlKWKV8cLwfkvyZj3v4L62U502umL96fhlm3BGOfKcsoYdJ_8ekI9P/pub?gid=0&single=true&output=csv";
-  const FILTER_COLUMNS = ["status", "ecosystem"]; // e.g. ["Category", "Status", "Region"] — [] = filter every column
+  const SHEET_CSV_URL = "";
+  const FILTER_COLUMNS = []; // e.g. ["category", "status"]
   // ----------------------------------------------------
+
+  // ---------- COLOR SCALE & CONDITIONAL CONFIGURATION ----------
+  // <!-- CHANGE SCORE GRADIENT COLORS HERE -->
+  const SCORE_COLOR_LOW = { r: 240, g: 244, b: 247 }; // #f0f4f7 (off-white blueish)
+  const SCORE_COLOR_HIGH = { r: 2, g: 35, b: 51 };    // #022333 (deep dark blue)
+
+  // <!-- CHANGE STATUS TEXT COLORS HERE -->
+  const STATUS_COLORS = {
+    "active": "green",
+    "defunct": "red",
+    "acquired": "orange",
+    "merger": "brown"
+  };
+  // --------------------------------------------------------------
 
   const root = document.getElementById("fst-root");
   const filtersEl = document.getElementById("fst-filters");
@@ -157,8 +171,10 @@
 
   let columns = [];
   let rows = [];
-  let activeFilters = {};   // { columnName: selectedValue }
+  let activeFilters = {};   
   let sortState = { col: null, dir: 1 };
+  let scoreMin = 0;
+  let scoreMax = 0;
 
   function loadingMsg(msg) {
     tbodyEl.innerHTML = `<tr><td class="fst-loading">${msg}</td></tr>`;
@@ -177,6 +193,16 @@
       }
       columns = results.meta.fields;
       rows = results.data;
+
+      // Calculate Min and Max scores dynamically from the dataset
+      calculateScoreBounds();
+
+      // <!-- DEFAULT FILTER LOGIC: Set 'status' to 'active' on load if the column exists -->
+      const statusCol = columns.find(c => c.toLowerCase() === "status");
+      if (statusCol) {
+        activeFilters[statusCol] = "active";
+      }
+
       init();
     },
     error: function (err) {
@@ -185,10 +211,29 @@
     }
   });
 
-  function init() {
-    buildFilters();
-    buildHeader();
-    render();
+  function calculateScoreBounds() {
+    const scoreCol = columns.find(c => c.toLowerCase() === "score");
+    if (!scoreCol) return;
+    let values = rows.map(r => parseFloat(r[scoreCol])).filter(v => !isNaN(v));
+    if (values.length) {
+      scoreMin = Math.min(...values);
+      scoreMax = Math.max(...values);
+    }
+  }
+
+  // Helper function to capitalize the first letter of strings
+  function capitalizeFirstLetter(str) {
+    if (!str) return "";
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  // Parses a strict markdown-style link: [Label](https://domain.com)
+  // Returns { label, url } if it matches, or null otherwise. Only ever used to
+  // build a real <a> element from these two extracted values — never via innerHTML.
+  function parseMarkdownLink(text) {
+    const match = text.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/);
+    if (!match) return null;
+    return { label: match[1], url: match[2] };
   }
 
   function buildFilters() {
@@ -203,13 +248,19 @@
       wrap.className = "fst-filter";
 
       const label = document.createElement("label");
-      label.textContent = col;
+      // <!-- COLUMN NAME CAPITALIZATION: Transforming dropdown headers to Sentence-case -->
+      label.textContent = capitalizeFirstLetter(col);
       label.setAttribute("for", "fst-filter-" + col);
 
       const select = document.createElement("select");
       select.id = "fst-filter-" + col;
       select.innerHTML = `<option value="">All</option>` +
         values.map(v => `<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`).join("");
+
+      // If a default filter was pre-set (like 'active'), select it visually in the UI dropdown
+      if (activeFilters[col]) {
+        select.value = activeFilters[col];
+      }
 
       select.addEventListener("change", () => {
         if (select.value) activeFilters[col] = select.value;
@@ -227,7 +278,8 @@
     const tr = document.createElement("tr");
     columns.forEach(col => {
       const th = document.createElement("th");
-      th.textContent = col;
+      // <!-- COLUMN NAME CAPITALIZATION: Turning raw CSV row keys (like 'fruit') into 'Fruit' for table view -->
+      th.textContent = capitalizeFirstLetter(col);
       th.addEventListener("click", () => {
         sortState = sortState.col === col ? { col, dir: -sortState.dir } : { col, dir: 1 };
         render();
@@ -242,6 +294,25 @@
     return rows.filter(row =>
       Object.entries(activeFilters).every(([col, val]) => (row[col] ?? "").toString().trim() === val)
     );
+  }
+
+  // Computes background color mix based on score sliding scale percentage
+  function getScoreStyle(valStr) {
+    const val = parseFloat(valStr);
+    if (isNaN(val) || scoreMax === scoreMin) return "";
+    
+    // Normalize value to a 0 - 1 factor
+    const factor = (val - scoreMin) / (scoreMax - scoreMin);
+    
+    // Mix low and high RGB profiles
+    const r = Math.round(SCORE_COLOR_LOW.r + factor * (SCORE_COLOR_HIGH.r - SCORE_COLOR_LOW.r));
+    const g = Math.round(SCORE_COLOR_LOW.g + factor * (SCORE_COLOR_HIGH.g - SCORE_COLOR_LOW.g));
+    const b = Math.round(SCORE_COLOR_LOW.b + factor * (SCORE_COLOR_HIGH.b - SCORE_COLOR_LOW.b));
+    
+    // Determine a text color fallback (white text if background is very dark)
+    const textCol = factor > 0.5 ? "#ffffff" : "var(--fst-ink)";
+    
+    return `background-color: rgb(${r},${g},${b}); color: ${textCol}; font-weight: 600;`;
   }
 
   function render() {
@@ -267,7 +338,40 @@
         const tr = document.createElement("tr");
         columns.forEach(col => {
           const td = document.createElement("td");
-          td.textContent = row[col] ?? "";
+          const cellValue = (row[col] ?? "").toString().trim();
+          const normalizedColName = col.toLowerCase();
+
+          // <!-- LINK & CELL RENDERING ENGINE -->
+          // 1. If column is 'score', map background color using our interpolation logic
+          if (normalizedColName === "score") {
+            td.style.cssText = getScoreStyle(cellValue);
+            td.textContent = cellValue;
+          } 
+          // 2. If column is 'status', modify the text color conditionally
+          else if (normalizedColName === "status") {
+            const statusKey = cellValue.toLowerCase();
+            if (STATUS_COLORS[statusKey]) {
+              td.style.cssText = `color: ${STATUS_COLORS[statusKey]}; font-weight: 600;`;
+            }
+            td.textContent = cellValue;
+          }
+          // 3. If cell contains markdown-style link syntax [Label](https://url), render a real <a> tag
+          //    built from the extracted label + url only — never via innerHTML, so no arbitrary
+          //    HTML/JS in a cell can ever execute. Required format: [Label](https://domain.com)
+          else if (parseMarkdownLink(cellValue)) {
+            const link = parseMarkdownLink(cellValue);
+            const a = document.createElement("a");
+            a.href = link.url;
+            a.textContent = link.label;
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+            td.appendChild(a);
+          }
+          // 4. Default plain text rendering fallback
+          else {
+            td.textContent = cellValue;
+          }
+
           tr.appendChild(td);
         });
         frag.appendChild(tr);
