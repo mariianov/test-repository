@@ -21,6 +21,11 @@
     </table>
   </div>
   <div id="fst-empty" class="fst-empty" hidden>No rows match the current filters.</div>
+  <div id="fst-pagination" class="fst-pagination">
+    <button id="fst-prev" class="fst-page-btn" type="button" aria-label="Previous page">&larr;</button>
+    <span id="fst-page-label"></span>
+    <button id="fst-next" class="fst-page-btn" type="button" aria-label="Next page">&rarr;</button>
+  </div>
 </div>
 
 <style>
@@ -36,7 +41,10 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     color: var(--fst-ink);
     font-size: 14px;
-    max-width: 100%;
+    /* <!-- WIDGET WIDTH: capped to 90% of the viewport and centered --> */
+    width: 90vw;
+    max-width: 90vw;
+    margin: 0 auto;
     box-sizing: border-box;
   }
   .fst-wrap *, .fst-wrap *::before, .fst-wrap *::after { box-sizing: border-box; }
@@ -102,11 +110,15 @@
   .fst-table {
     width: 100%;
     border-collapse: collapse;
-    white-space: nowrap;
+    /* <!-- WRAPPING: fixed layout + word-wrap makes long headers/cells wrap instead of stretching the table --> */
+    table-layout: fixed;
+    white-space: normal;
+    word-wrap: break-word;
   }
   .fst-table th, .fst-table td {
     padding: 9px 12px;
     text-align: left;
+    overflow-wrap: break-word;
     /* <!-- HORIZONTAL ROW LINES: This keeps only the bottom horizontal line visible for each cell --> */
     border-bottom: 1px solid var(--fst-line);
   }
@@ -133,6 +145,28 @@
     padding: 16px;
     color: var(--fst-muted);
   }
+
+  .fst-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 14px;
+    color: var(--fst-muted);
+    font-size: 13px;
+  }
+  .fst-page-btn {
+    border: 1px solid var(--fst-line);
+    background: #fff;
+    color: var(--fst-ink);
+    border-radius: var(--fst-radius);
+    padding: 5px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+  }
+  .fst-page-btn:hover:not(:disabled) { background: var(--fst-bg-head); }
+  .fst-page-btn:disabled { opacity: 0.4; cursor: default; }
 
   @media (max-width: 600px) {
     .fst-filter, .fst-filter select, .fst-filter input { min-width: 130px; }
@@ -168,7 +202,13 @@
   const countEl = document.getElementById("fst-count");
   const emptyEl = document.getElementById("fst-empty");
   const resetBtn = document.getElementById("fst-reset");
- 
+  const prevBtn = document.getElementById("fst-prev");
+  const nextBtn = document.getElementById("fst-next");
+  const pageLabelEl = document.getElementById("fst-page-label");
+
+  const ROWS_PER_PAGE = 20;
+  let currentPage = 1;
+
   let columns = [];
   let rows = [];
   let activeFilters = {};   
@@ -202,7 +242,13 @@
       if (statusCol) {
         activeFilters[statusCol] = "active";
       }
- 
+
+      // <!-- DEFAULT SORT: sort by 'score' descending on load, if that column exists -->
+      const scoreCol = columns.find(c => c.toLowerCase() === "score");
+      if (scoreCol) {
+        sortState = { col: scoreCol, dir: -1 };
+      }
+
       init();
     },
     error: function (err) {
@@ -271,6 +317,7 @@
       select.addEventListener("change", () => {
         if (select.value) activeFilters[col] = select.value;
         else delete activeFilters[col];
+        currentPage = 1;
         render();
       });
  
@@ -288,6 +335,7 @@
       th.textContent = capitalizeFirstLetter(col);
       th.addEventListener("click", () => {
         sortState = sortState.col === col ? { col, dir: -sortState.dir } : { col, dir: 1 };
+        currentPage = 1;
         render();
       });
       tr.appendChild(th);
@@ -337,10 +385,19 @@
     tbodyEl.innerHTML = "";
     if (!filtered.length) {
       emptyEl.hidden = false;
+      currentPage = 1;
     } else {
       emptyEl.hidden = true;
+
+      // <!-- PAGINATION: clamp current page, then slice out just this page's rows -->
+      const totalPages = Math.max(1, Math.ceil(filtered.length / ROWS_PER_PAGE));
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+      const startIdx = (currentPage - 1) * ROWS_PER_PAGE;
+      const pageRows = filtered.slice(startIdx, startIdx + ROWS_PER_PAGE);
+
       const frag = document.createDocumentFragment();
-      filtered.forEach(row => {
+      pageRows.forEach(row => {
         const tr = document.createElement("tr");
         columns.forEach(col => {
           const td = document.createElement("td");
@@ -385,12 +442,27 @@
       tbodyEl.appendChild(frag);
     }
  
+    const totalPagesForLabel = Math.max(1, Math.ceil(filtered.length / ROWS_PER_PAGE));
     countEl.textContent = `${filtered.length} of ${rows.length} rows`;
+    pageLabelEl.textContent = `Page ${currentPage} of ${totalPagesForLabel}`;
+    prevBtn.disabled = currentPage <= 1;
+    nextBtn.disabled = currentPage >= totalPagesForLabel;
   }
  
   resetBtn.addEventListener("click", () => {
     activeFilters = {};
     filtersEl.querySelectorAll("select").forEach(s => s.value = "");
+    currentPage = 1;
+    render();
+  });
+
+  prevBtn.addEventListener("click", () => {
+    currentPage -= 1;
+    render();
+  });
+
+  nextBtn.addEventListener("click", () => {
+    currentPage += 1;
     render();
   });
  
