@@ -51,35 +51,56 @@
 
   .fst-filters {
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 12px;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
   }
-  .fst-filter {
+  .fst-filter-group {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    min-width: 160px;
+    gap: 6px;
   }
-  .fst-filter label {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: var(--fst-muted);
-  }
-  .fst-filter select, .fst-filter input {
-    font-size: 14px;
-    padding: 7px 10px;
-    border: 1px solid var(--fst-line);
-    border-radius: var(--fst-radius);
-    background: #fff;
+  .fst-filter-group-label {
+    font-weight: 700;
+    font-size: 13px;
     color: var(--fst-ink);
-    min-width: 160px;
   }
-  .fst-filter select:focus, .fst-filter input:focus {
+  .fst-pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .fst-pill {
+    --pill-color: #6b7280;
+    border: 1.5px solid var(--pill-color);
+    border-radius: 999px;
+    padding: 5px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    background: #fff;
+    color: var(--pill-color);
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .fst-pill:hover { opacity: 0.85; }
+  .fst-pill.selected {
+    background: var(--pill-color);
+    color: #fff;
+  }
+  .fst-pill:focus-visible {
     outline: 2px solid var(--fst-accent);
-    outline-offset: 1px;
+    outline-offset: 2px;
+  }
+
+  /* Source text in "(...)" at the end of a column name — italic, muted gray */
+  .fst-col-source {
+    font-style: italic;
+    color: #6f6f6f;
+  }
+
+  .fst-cell-link {
+    text-decoration: none;
+    color: #022333;
   }
 
   .fst-meta {
@@ -169,7 +190,7 @@
   .fst-page-btn:disabled { opacity: 0.4; cursor: default; }
 
   @media (max-width: 600px) {
-    .fst-filter, .fst-filter select, .fst-filter input { min-width: 130px; }
+    .fst-pill { padding: 5px 12px; font-size: 12px; }
   }
 </style>
 
@@ -193,6 +214,9 @@
     "acquired": "orange",
     "merger": "brown"
   };
+
+  // <!-- PILL FILTER COLORS: cycles through these, one color per filter column -->
+  const PILL_PALETTE = ["#0e9f6e", "#1c64f2", "#7e3af2", "#d97706", "#dc2626", "#0891b2", "#c2410c"];
   // --------------------------------------------------------------
 
   const root = document.getElementById("fst-root");
@@ -240,7 +264,7 @@
       // <!-- DEFAULT FILTER LOGIC: Set 'status' to 'active' on load if the column exists -->
       const statusCol = columns.find(c => c.toLowerCase() === "status");
       if (statusCol) {
-        activeFilters[statusCol] = "active";
+        activeFilters[statusCol] = new Set(["active"]);
       }
 
       // <!-- DEFAULT SORT: sort by 'score' descending on load, if that column exists -->
@@ -278,6 +302,27 @@
     if (!str) return "";
     return str.charAt(0).toUpperCase() + str.slice(1);
   }
+
+  // Splits "Revenue (Crunchbase)" into { main: "Revenue", source: "(Crunchbase)" }.
+  // If there's no trailing "(...)", source is "".
+  function splitColumnLabel(label) {
+    const match = label.match(/^(.*?)\s*(\([^)]*\))\s*$/);
+    if (!match) return { main: label, source: "" };
+    return { main: match[1], source: match[2] };
+  }
+
+  // Appends a column's label to an element as DOM nodes (never innerHTML): plain
+  // text for the main name, plus an italic muted-gray span for any "(source)" suffix.
+  function appendColumnLabel(el, rawCol) {
+    const { main, source } = splitColumnLabel(capitalizeFirstLetter(rawCol));
+    el.appendChild(document.createTextNode(main));
+    if (source) {
+      const span = document.createElement("span");
+      span.className = "fst-col-source";
+      span.textContent = (main ? " " : "") + source;
+      el.appendChild(span);
+    }
+  }
  
   // Parses a strict markdown-style link: [Label](https://domain.com)
   // Returns { label, url } if it matches, or null otherwise. Only ever used to
@@ -291,39 +336,52 @@
   function buildFilters() {
     const filterCols = FILTER_COLUMNS.length ? FILTER_COLUMNS : columns;
     filtersEl.innerHTML = "";
-    filterCols.forEach(col => {
+    filterCols.forEach((col, colIndex) => {
       if (!columns.includes(col)) return;
       const values = Array.from(new Set(rows.map(r => (r[col] ?? "").toString().trim()).filter(v => v !== "")))
         .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
- 
-      const wrap = document.createElement("div");
-      wrap.className = "fst-filter";
- 
-      const label = document.createElement("label");
-      // <!-- COLUMN NAME CAPITALIZATION: Transforming dropdown headers to Sentence-case -->
-      label.textContent = capitalizeFirstLetter(col);
-      label.setAttribute("for", "fst-filter-" + col);
- 
-      const select = document.createElement("select");
-      select.id = "fst-filter-" + col;
-      select.innerHTML = `<option value="">All</option>` +
-        values.map(v => `<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`).join("");
- 
-      // If a default filter was pre-set (like 'active'), select it visually in the UI dropdown
-      if (activeFilters[col]) {
-        select.value = activeFilters[col];
-      }
- 
-      select.addEventListener("change", () => {
-        if (select.value) activeFilters[col] = select.value;
-        else delete activeFilters[col];
-        currentPage = 1;
-        render();
+
+      const color = PILL_PALETTE[colIndex % PILL_PALETTE.length];
+
+      const group = document.createElement("div");
+      group.className = "fst-filter-group";
+
+      const groupLabel = document.createElement("div");
+      groupLabel.className = "fst-filter-group-label";
+      appendColumnLabel(groupLabel, col);
+
+      const pillRow = document.createElement("div");
+      pillRow.className = "fst-pill-row";
+
+      values.forEach(val => {
+        const pill = document.createElement("button");
+        pill.type = "button";
+        pill.className = "fst-pill";
+        pill.style.setProperty("--pill-color", color);
+        pill.textContent = val;
+
+        const isSelected = activeFilters[col] && activeFilters[col].has(val);
+        if (isSelected) pill.classList.add("selected");
+
+        pill.addEventListener("click", () => {
+          if (!activeFilters[col]) activeFilters[col] = new Set();
+          if (activeFilters[col].has(val)) {
+            activeFilters[col].delete(val);
+            if (activeFilters[col].size === 0) delete activeFilters[col];
+          } else {
+            activeFilters[col].add(val);
+          }
+          pill.classList.toggle("selected");
+          currentPage = 1;
+          render();
+        });
+
+        pillRow.appendChild(pill);
       });
- 
-      wrap.appendChild(label);
-      wrap.appendChild(select);
-      filtersEl.appendChild(wrap);
+
+      group.appendChild(groupLabel);
+      group.appendChild(pillRow);
+      filtersEl.appendChild(group);
     });
   }
  
@@ -331,8 +389,7 @@
     const tr = document.createElement("tr");
     columns.forEach(col => {
       const th = document.createElement("th");
-      // <!-- COLUMN NAME CAPITALIZATION: Turning raw CSV row keys (like 'fruit') into 'Fruit' for table view -->
-      th.textContent = capitalizeFirstLetter(col);
+      appendColumnLabel(th, col);
       th.addEventListener("click", () => {
         sortState = sortState.col === col ? { col, dir: -sortState.dir } : { col, dir: 1 };
         currentPage = 1;
@@ -346,7 +403,9 @@
  
   function getFilteredRows() {
     return rows.filter(row =>
-      Object.entries(activeFilters).every(([col, val]) => (row[col] ?? "").toString().trim() === val)
+      Object.entries(activeFilters).every(([col, valSet]) =>
+        !valSet || valSet.size === 0 || valSet.has((row[col] ?? "").toString().trim())
+      )
     );
   }
  
@@ -428,6 +487,7 @@
             a.textContent = link.label;
             a.target = "_blank";
             a.rel = "noopener noreferrer";
+            a.className = "fst-cell-link";
             td.appendChild(a);
           }
           // 4. Default plain text rendering fallback
@@ -451,7 +511,7 @@
  
   resetBtn.addEventListener("click", () => {
     activeFilters = {};
-    filtersEl.querySelectorAll("select").forEach(s => s.value = "");
+    filtersEl.querySelectorAll(".fst-pill.selected").forEach(p => p.classList.remove("selected"));
     currentPage = 1;
     render();
   });
