@@ -79,7 +79,7 @@
     font-weight: 600;
     cursor: pointer;
     background: #fff;
-    color: var(--pill-color);
+    color: var(--fst-ink);
     transition: background 0.15s ease, color 0.15s ease;
   }
   .fst-pill:hover { opacity: 0.85; }
@@ -201,6 +201,12 @@
   // ---------- CONFIG: edit these two lines ----------
   const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ23eH-VC8KZcjNSPUmDudueiZlKWKV8cLwfkvyZj3v4L62U502umL96fhlm3BGOfKcsoYdJ_8ekI9P/pub?gid=0&single=true&output=csv";
   const FILTER_COLUMNS = ["ecosystem", "status"]; // e.g. ["category", "status"]
+
+  // Numeric columns to group into range "buckets" instead of listing every unique
+  // value. Key = exact column name (case-sensitive, must match your sheet header),
+  // value = bucket size. e.g. "visibility": 20 turns 76, 42, 11, 99... into pills
+  // labeled 0–20, 21–40, 41–60, 61–80, 81–100 (generated automatically from your data).
+  const BUCKET_FILTERS = { "visibility": 20 };
   // ----------------------------------------------------
 
   // ---------- COLOR SCALE & CONDITIONAL CONFIGURATION ----------
@@ -217,7 +223,7 @@
   };
 
   // <!-- PILL FILTER COLORS: cycles through these, one color per filter column -->
-  const PILL_PALETTE = ["#022333", "#03E26D", "#0D6B98"];
+  const PILL_PALETTE = ["#0D6B98", "#03E26D", "#022333"];
   // --------------------------------------------------------------
 
   const root = document.getElementById("fst-root");
@@ -240,6 +246,7 @@
   let sortState = { col: null, dir: 1 };
   let scoreMin = 0;
   let scoreMax = 0;
+  let bucketRangesByCol = {}; // col -> [{ label, min, max }, ...], only set for BUCKET_FILTERS columns
  
   function loadingMsg(msg) {
     tbodyEl.innerHTML = `<tr><td class="fst-loading">${msg}</td></tr>`;
@@ -304,6 +311,22 @@
     return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
+  // Builds range buckets of the given size, starting at 0, covering up through the
+  // highest value present. size=20 over values up to 99 gives:
+  // [0–20], [21–40], [41–60], [61–80], [81–100]
+  function computeBucketRanges(values, size) {
+    if (!values.length) return [];
+    const maxVal = Math.max(...values);
+    const numBuckets = maxVal <= size ? 1 : Math.floor((maxVal - 1) / size) + 1;
+    const buckets = [];
+    for (let k = 0; k < numBuckets; k++) {
+      const min = k === 0 ? 0 : k * size + 1;
+      const max = (k + 1) * size;
+      buckets.push({ label: `${min}\u2013${max}`, min, max });
+    }
+    return buckets;
+  }
+
   // Splits "Revenue (Crunchbase)" into { main: "Revenue", source: "(Crunchbase)" }.
   // If there's no trailing "(...)", source is "".
   function splitColumnLabel(label) {
@@ -339,8 +362,19 @@
     filtersEl.innerHTML = "";
     filterCols.forEach((col, colIndex) => {
       if (!columns.includes(col)) return;
-      const values = Array.from(new Set(rows.map(r => (r[col] ?? "").toString().trim()).filter(v => v !== "")))
-        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+      const isBucketed = Object.prototype.hasOwnProperty.call(BUCKET_FILTERS, col);
+      let pillValues; // array of strings shown/used as pill values
+
+      if (isBucketed) {
+        const numericValues = rows.map(r => parseFloat(r[col])).filter(v => !isNaN(v));
+        const ranges = computeBucketRanges(numericValues, BUCKET_FILTERS[col]);
+        bucketRangesByCol[col] = ranges;
+        pillValues = ranges.map(r => r.label);
+      } else {
+        pillValues = Array.from(new Set(rows.map(r => (r[col] ?? "").toString().trim()).filter(v => v !== "")))
+          .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+      }
 
       const color = PILL_PALETTE[colIndex % PILL_PALETTE.length];
 
@@ -354,7 +388,7 @@
       const pillRow = document.createElement("div");
       pillRow.className = "fst-pill-row";
 
-      values.forEach(val => {
+      pillValues.forEach(val => {
         const pill = document.createElement("button");
         pill.type = "button";
         pill.className = "fst-pill";
@@ -404,9 +438,18 @@
  
   function getFilteredRows() {
     return rows.filter(row =>
-      Object.entries(activeFilters).every(([col, valSet]) =>
-        !valSet || valSet.size === 0 || valSet.has((row[col] ?? "").toString().trim())
-      )
+      Object.entries(activeFilters).every(([col, valSet]) => {
+        if (!valSet || valSet.size === 0) return true;
+
+        if (bucketRangesByCol[col]) {
+          const num = parseFloat(row[col]);
+          if (isNaN(num)) return false;
+          const bucket = bucketRangesByCol[col].find(b => num >= b.min && num <= b.max);
+          return bucket ? valSet.has(bucket.label) : false;
+        }
+
+        return valSet.has((row[col] ?? "").toString().trim());
+      })
     );
   }
  
