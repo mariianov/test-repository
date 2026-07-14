@@ -200,13 +200,13 @@
 (function () {
   // ---------- CONFIG: edit these two lines ----------
   const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ23eH-VC8KZcjNSPUmDudueiZlKWKV8cLwfkvyZj3v4L62U502umL96fhlm3BGOfKcsoYdJ_8ekI9P/pub?gid=0&single=true&output=csv";
-  const FILTER_COLUMNS = ["ecosystem", "status", "visibility score"]; // e.g. ["category", "status"]
+  const FILTER_COLUMNS = ["ecosystem", "status", "Visibility score (Park search)"]; // e.g. ["category", "status"]
 
   // Numeric columns to group into range "buckets" instead of listing every unique
   // value. Key = exact column name (case-sensitive, must match your sheet header),
   // value = bucket size. e.g. "visibility": 20 turns 76, 42, 11, 99... into pills
   // labeled 0–20, 21–40, 41–60, 61–80, 81–100 (generated automatically from your data).
-  const BUCKET_FILTERS = { "visibility score": 20 };
+  const BUCKET_FILTERS = { "Visibility score (Park search)": 20 };
   // ----------------------------------------------------
 
   // ---------- COLOR SCALE & CONDITIONAL CONFIGURATION ----------
