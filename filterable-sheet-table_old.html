@@ -101,6 +101,7 @@
   .fst-cell-link {
     text-decoration: none;
     color: #022333;
+    font-weight: 700;
   }
 
   .fst-meta {
@@ -199,7 +200,7 @@
 (function () {
   // ---------- CONFIG: edit these two lines ----------
   const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ23eH-VC8KZcjNSPUmDudueiZlKWKV8cLwfkvyZj3v4L62U502umL96fhlm3BGOfKcsoYdJ_8ekI9P/pub?gid=0&single=true&output=csv";
-  const FILTER_COLUMNS = []; // e.g. ["category", "status"]
+  const FILTER_COLUMNS = ["ecosystem", "status"]; // e.g. ["category", "status"]
   // ----------------------------------------------------
 
   // ---------- COLOR SCALE & CONDITIONAL CONFIGURATION ----------
@@ -216,7 +217,7 @@
   };
 
   // <!-- PILL FILTER COLORS: cycles through these, one color per filter column -->
-  const PILL_PALETTE = ["#0e9f6e", "#1c64f2", "#7e3af2", "#d97706", "#dc2626", "#0891b2", "#c2410c"];
+  const PILL_PALETTE = ["#022333", "#03E26D", "#0D6B98"];
   // --------------------------------------------------------------
 
   const root = document.getElementById("fst-root");
