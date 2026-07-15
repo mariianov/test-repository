@@ -9,6 +9,9 @@
 ===================================================================== -->
 
 <div id="fst-root" class="fst-wrap">
+  <div class="fst-search">
+    <input id="fst-search-input" type="text" placeholder="Search all columns…" autocomplete="off" />
+  </div>
   <div id="fst-filters" class="fst-filters"></div>
   <div class="fst-meta">
     <span id="fst-count"></span>
@@ -25,10 +28,6 @@
     <button id="fst-prev" class="fst-page-btn" type="button" aria-label="Previous page">&larr;</button>
     <span id="fst-page-label"></span>
     <button id="fst-next" class="fst-page-btn" type="button" aria-label="Next page">&rarr;</button>
-  </div>
-
-  <div id="notes">
-    <p>By Mariia Novoselia. <a href="https://github.com/mariianov/test-repository" target="_blank">Read full methodology.</a></p>
   </div>
 </div>
 
@@ -52,6 +51,24 @@
     box-sizing: border-box;
   }
   .fst-wrap *, .fst-wrap *::before, .fst-wrap *::after { box-sizing: border-box; }
+
+  .fst-search {
+    margin-bottom: 14px;
+  }
+  .fst-search input {
+    width: 100%;
+    max-width: 360px;
+    font-size: 14px;
+    padding: 8px 12px;
+    border: 1px solid var(--fst-line);
+    border-radius: var(--fst-radius);
+    background: #fff;
+    color: var(--fst-ink);
+  }
+  .fst-search input:focus {
+    outline: 2px solid var(--fst-accent);
+    outline-offset: 1px;
+  }
 
   .fst-filters {
     display: flex;
@@ -194,7 +211,6 @@
   .fst-page-btn:hover:not(:disabled) { background: var(--fst-bg-head); }
   .fst-page-btn:disabled { opacity: 0.4; cursor: default; }
 
-  
   @media (max-width: 600px) {
     .fst-pill { padding: 5px 12px; font-size: 12px; }
   }
@@ -212,12 +228,21 @@
   // value = bucket size. e.g. "visibility": 20 turns 76, 42, 11, 99... into pills
   // labeled 0–20, 21–40, 41–60, 61–80, 81–100 (generated automatically from your data).
   const BUCKET_FILTERS = { "Visibility score (Park search)": 20 };
+
+  // Custom pill ordering per column, overriding the default alphabetical sort.
+  // Key = exact column name (case-sensitive, must match your sheet header).
+  // Values not listed here fall to the end, alphabetically among themselves.
+  const CUSTOM_PILL_ORDER = {
+    "status": ["active", "merger", "acquired", "defunct"]
+  };
   // ----------------------------------------------------
 
   // ---------- COLOR SCALE & CONDITIONAL CONFIGURATION ----------
   // <!-- CHANGE SCORE GRADIENT COLORS HERE -->
   const SCORE_COLOR_LOW = { r: 240, g: 244, b: 247 }; // #f0f4f7 (off-white blueish)
-  const SCORE_COLOR_HIGH = { r: 2, g: 35, b: 51 };    // #022333 (deep dark blue)
+  const SCORE_COLOR_HIGH = { r: 8, g: 72, b: 103 }; // #084867 (lighter dark blue)
+ // const SCORE_COLOR_HIGH = { r: 2, g: 35, b: 51 };    // #022333 (deep dark blue)
+
 
   // <!-- CHANGE STATUS TEXT COLORS HERE -->
   const STATUS_COLORS = {
@@ -241,9 +266,11 @@
   const prevBtn = document.getElementById("fst-prev");
   const nextBtn = document.getElementById("fst-next");
   const pageLabelEl = document.getElementById("fst-page-label");
+  const searchInput = document.getElementById("fst-search-input");
 
   const ROWS_PER_PAGE = 20;
   let currentPage = 1;
+  let searchTerm = "";
 
   let columns = [];
   let rows = [];
@@ -316,6 +343,19 @@
     return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
+  // Sorts values by a specified custom order (case-insensitive match); anything
+  // not found in the order list falls to the end, sorted alphabetically among itself.
+  function sortByCustomOrder(values, order) {
+    const orderMap = {};
+    order.forEach((v, i) => { orderMap[v.toLowerCase()] = i; });
+    return values.slice().sort((a, b) => {
+      const ai = Object.prototype.hasOwnProperty.call(orderMap, a.toLowerCase()) ? orderMap[a.toLowerCase()] : Infinity;
+      const bi = Object.prototype.hasOwnProperty.call(orderMap, b.toLowerCase()) ? orderMap[b.toLowerCase()] : Infinity;
+      if (ai !== bi) return ai - bi;
+      return a.localeCompare(b, undefined, { numeric: true });
+    });
+  }
+
   // Builds range buckets of the given size, starting at 0, covering up through the
   // highest value present. size=20 over values up to 99 gives:
   // [0–20], [21–40], [41–60], [61–80], [81–100]
@@ -379,6 +419,9 @@
       } else {
         pillValues = Array.from(new Set(rows.map(r => (r[col] ?? "").toString().trim()).filter(v => v !== "")))
           .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+        if (CUSTOM_PILL_ORDER[col]) {
+          pillValues = sortByCustomOrder(pillValues, CUSTOM_PILL_ORDER[col]);
+        }
       }
 
       const color = PILL_PALETTE[colIndex % PILL_PALETTE.length];
@@ -441,8 +484,14 @@
     theadEl.appendChild(tr);
   }
  
+  function rowMatchesSearch(row) {
+    if (!searchTerm) return true;
+    return columns.some(col => (row[col] ?? "").toString().toLowerCase().includes(searchTerm));
+  }
+
   function getFilteredRows() {
     return rows.filter(row =>
+      rowMatchesSearch(row) &&
       Object.entries(activeFilters).every(([col, valSet]) => {
         if (!valSet || valSet.size === 0) return true;
 
@@ -572,6 +621,12 @@
 
   nextBtn.addEventListener("click", () => {
     currentPage += 1;
+    render();
+  });
+
+  searchInput.addEventListener("input", () => {
+    searchTerm = searchInput.value.trim().toLowerCase();
+    currentPage = 1;
     render();
   });
  
