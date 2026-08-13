@@ -312,7 +312,7 @@
       }
 
       // <!-- DEFAULT SORT: sort by 'score' descending on load, if that column exists -->
-      const scoreCol = columns.find(c => c.toLowerCase() === "score");
+      const scoreCol = columns.find(c => c.toLowerCase() === "RealLIST Score");
       if (scoreCol) {
         sortState = { col: scoreCol, dir: -1 };
       }
@@ -332,7 +332,7 @@
   }
  
   function calculateScoreBounds() {
-    const scoreCol = columns.find(c => c.toLowerCase() === "score");
+    const scoreCol = columns.find(c => c.toLowerCase() === "RealLIST Score");
     if (!scoreCol) return;
     let values = rows.map(r => parseFloat(r[scoreCol])).filter(v => !isNaN(v));
     if (values.length) {
@@ -567,7 +567,7 @@
  
           // <!-- LINK & CELL RENDERING ENGINE -->
           // 1. If column is 'score', map background color using our interpolation logic
-          if (normalizedColName === "score") {
+          if (normalizedColName === "RealLIST Score") {
             td.style.cssText = getScoreStyle(cellValue);
             td.textContent = cellValue;
           } 
