@@ -30,7 +30,6 @@
     <button id="fst-next" class="fst-page-btn" type="button" aria-label="Next page">&rarr;</button>
   </div>
   <div>
-    <p>Methodology here</p>
     <p>By Mariia Novoselia. <a href="#" target="_blank">Read full methodology.</a></p>
   </div>
 </div>
@@ -94,19 +93,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-  }
-  .fst-select {
-    font-size: 13px;
-    padding: 6px 10px;
-    border: 1px solid var(--fst-line);
-    border-radius: var(--fst-radius);
-    background: #fff;
-    color: var(--fst-ink);
-    max-width: 280px;
-  }
-  .fst-select:focus {
-    outline: 2px solid var(--fst-accent);
-    outline-offset: 1px;
   }
   .fst-pill {
     --pill-color: #6b7280;
@@ -230,28 +216,6 @@
 
   @media (max-width: 600px) {
     .fst-pill { padding: 5px 12px; font-size: 12px; }
-
-    /* <!-- FROZEN FIRST COLUMN (mobile only): keeps column 1 pinned while the
-         rest of the table scrolls horizontally, like a frozen pane in Excel.
-         Remove this whole rule block (or widen the media query) if you want
-         this behavior on desktop too. --> */
-    .fst-table td:first-child,
-    .fst-table th:first-child {
-      position: sticky;
-      left: 0;
-      box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.2);
-    }
-    .fst-table td:first-child {
-      background: #fff;
-      z-index: 1;
-    }
-    .fst-table th:first-child {
-      background: var(--fst-bg-head);
-      z-index: 2; /* stays above both scrolling cells and other sticky headers */
-    }
-    .fst-table tbody tr:hover td:first-child {
-      background: #fafbfc;
-    }
   }
 </style>
 
@@ -262,26 +226,11 @@
   const SHEET_CSV_URL = "";
   const FILTER_COLUMNS = ["RealLIST ecosystem", "Status", "Total funding (Pitchbook, in $000)", "Industry (Apollo.io)"]; // e.g. ["category", "status"]
 
-  // Columns listed here exist in your sheet and CAN be used in FILTER_COLUMNS
-  // (and are still searched by the search box), but are hidden from the visible
-  // table — useful when a column is only there to power a filter and doesn't
-  // need its own table column (e.g. saving horizontal space).
-  // Key = exact column name (case-insensitive match is fine).
-  const HIDDEN_COLUMNS = ["Industry (Apollo.io)"];
-
   // Numeric columns to group into range "buckets" instead of listing every unique value. 
   // Key = exact column name (case-sensitive, must match your sheet header), value = bucket size. 
   // e.g. "visibility": 20 turns 76, 42, 11, 99... into pills labeled 0–20, 21–40, 41–60, 61–80, 81–100 
   // (generated automatically from your data).
   const BUCKET_FILTERS = { "Total funding (Pitchbook, in $000)": 100000 };
-
-  // Columns listed here render as a single-select dropdown instead of pill buttons.
-  // Works with plain columns OR bucketed columns (e.g. combine with BUCKET_FILTERS
-  // above to get a dropdown of ranges like "0–100,000", "100,001–200,000", etc).
-  // Key = exact column name (case-insensitive match is fine).
-  // To add another dropdown filter, just add its column name to this array —
-  // it must also be listed in FILTER_COLUMNS above to show up at all.
-  const DROPDOWN_FILTERS = ["Total funding (Pitchbook, in $000)"];
 
   // Custom pill ordering per column, overriding the default alphabetical sort.
   // Key = exact column name (case-sensitive, must match your sheet header).
@@ -292,10 +241,6 @@
   // ----------------------------------------------------
 
   // ---------- COLOR SCALE & CONDITIONAL CONFIGURATION ----------
-  // <!-- The exact column name (must match your sheet header) that gets the
-  //      color-gradient treatment below. Matched case-insensitively. -->
-  const SCORE_COLUMN = "RealLIST Score";
-
   // <!-- CHANGE SCORE GRADIENT COLORS HERE -->
   const SCORE_COLOR_LOW = { r: 240, g: 244, b: 247 }; // #f0f4f7 (off-white blueish)
   const SCORE_COLOR_HIGH = { r: 8, g: 72, b: 103 }; // #084867 (lighter dark blue)
@@ -314,16 +259,6 @@
   // <!-- PILL FILTER COLORS: cycles through these, one color per filter column -->
   const PILL_PALETTE = ["#0D6B98", "#03E26D", "#022333"];
   // --------------------------------------------------------------
-
-  // Looks up a column's config value (e.g. in CUSTOM_PILL_ORDER, STATUS_COLORS)
-  // matching the column name case-insensitively, so config keys don't have to
-  // exactly match the sheet header's capitalization.
-  function getConfigForCol(configObj, colName) {
-    if (Object.prototype.hasOwnProperty.call(configObj, colName)) return configObj[colName];
-    const lower = colName.toLowerCase();
-    const foundKey = Object.keys(configObj).find(k => k.toLowerCase() === lower);
-    return foundKey !== undefined ? configObj[foundKey] : undefined;
-  }
 
   const root = document.getElementById("fst-root");
   const filtersEl = document.getElementById("fst-filters");
@@ -377,7 +312,7 @@
       }
 
       // <!-- DEFAULT SORT: sort by 'score' descending on load, if that column exists -->
-      const scoreCol = columns.find(c => c.toLowerCase() === SCORE_COLUMN.toLowerCase());
+      const scoreCol = columns.find(c => c.toLowerCase() === "RealLIST Score");
       if (scoreCol) {
         sortState = { col: scoreCol, dir: -1 };
       }
@@ -397,7 +332,7 @@
   }
  
   function calculateScoreBounds() {
-    const scoreCol = columns.find(c => c.toLowerCase() === SCORE_COLUMN.toLowerCase());
+    const scoreCol = columns.find(c => c.toLowerCase() === "RealLIST Score");
     if (!scoreCol) return;
     let values = rows.map(r => parseFloat(r[scoreCol])).filter(v => !isNaN(v));
     if (values.length) {
@@ -488,9 +423,8 @@
       } else {
         pillValues = Array.from(new Set(rows.map(r => (r[col] ?? "").toString().trim()).filter(v => v !== "")))
           .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-        const customOrder = getConfigForCol(CUSTOM_PILL_ORDER, col);
-        if (customOrder) {
-          pillValues = sortByCustomOrder(pillValues, customOrder);
+        if (CUSTOM_PILL_ORDER[col]) {
+          pillValues = sortByCustomOrder(pillValues, CUSTOM_PILL_ORDER[col]);
         }
       }
 
@@ -502,43 +436,6 @@
       const groupLabel = document.createElement("div");
       groupLabel.className = "fst-filter-group-label";
       appendColumnLabel(groupLabel, col);
-
-      const isDropdown = DROPDOWN_FILTERS.some(c => c.toLowerCase() === col.toLowerCase());
-
-      if (isDropdown) {
-        const select = document.createElement("select");
-        select.className = "fst-select";
-
-        const allOption = document.createElement("option");
-        allOption.value = "";
-        allOption.textContent = "All";
-        select.appendChild(allOption);
-
-        pillValues.forEach(val => {
-          const opt = document.createElement("option");
-          opt.value = val;
-          opt.textContent = val;
-          select.appendChild(opt);
-        });
-
-        const currentVal = activeFilters[col] ? Array.from(activeFilters[col])[0] : "";
-        select.value = currentVal;
-
-        select.addEventListener("change", () => {
-          if (select.value === "") {
-            delete activeFilters[col];
-          } else {
-            activeFilters[col] = new Set([select.value]);
-          }
-          currentPage = 1;
-          render();
-        });
-
-        group.appendChild(groupLabel);
-        group.appendChild(select);
-        filtersEl.appendChild(group);
-        return;
-      }
 
       const pillRow = document.createElement("div");
       pillRow.className = "fst-pill-row";
@@ -575,16 +472,9 @@
     });
   }
  
-  // Returns the columns that should actually be rendered in the table
-  // (i.e. all columns except those listed in HIDDEN_COLUMNS). Hidden columns
-  // stay in `rows`/`columns` so they still work for filtering and search.
-  function visibleColumns() {
-    return columns.filter(col => !HIDDEN_COLUMNS.some(h => h.toLowerCase() === col.toLowerCase()));
-  }
-
   function buildHeader() {
     const tr = document.createElement("tr");
-    visibleColumns().forEach(col => {
+    columns.forEach(col => {
       const th = document.createElement("th");
       appendColumnLabel(th, col);
       th.addEventListener("click", () => {
@@ -668,25 +558,24 @@
       const pageRows = filtered.slice(startIdx, startIdx + ROWS_PER_PAGE);
 
       const frag = document.createDocumentFragment();
-      const rowCols = visibleColumns();
       pageRows.forEach(row => {
         const tr = document.createElement("tr");
-        rowCols.forEach(col => {
+        columns.forEach(col => {
           const td = document.createElement("td");
           const cellValue = (row[col] ?? "").toString().trim();
           const normalizedColName = col.toLowerCase();
  
           // <!-- LINK & CELL RENDERING ENGINE -->
           // 1. If column is 'score', map background color using our interpolation logic
-          if (normalizedColName === SCORE_COLUMN.toLowerCase()) {
+          if (normalizedColName === "RealLIST Score") {
             td.style.cssText = getScoreStyle(cellValue);
             td.textContent = cellValue;
           } 
           // 2. If column is 'status', modify the text color conditionally
           else if (normalizedColName === "status") {
-            const statusColor = getConfigForCol(STATUS_COLORS, cellValue);
-            if (statusColor) {
-              td.style.cssText = `color: ${statusColor}; font-weight: 600;`;
+            const statusKey = cellValue.toLowerCase();
+            if (STATUS_COLORS[statusKey]) {
+              td.style.cssText = `color: ${STATUS_COLORS[statusKey]}; font-weight: 600;`;
             }
             td.textContent = cellValue;
           }
@@ -725,7 +614,6 @@
   resetBtn.addEventListener("click", () => {
     activeFilters = {};
     filtersEl.querySelectorAll(".fst-pill.selected").forEach(p => p.classList.remove("selected"));
-    filtersEl.querySelectorAll(".fst-select").forEach(s => { s.value = ""; });
     currentPage = 1;
     render();
   });
