@@ -294,6 +294,16 @@
   // Key = exact column name (case-insensitive match is fine).
   const HIDDEN_COLUMNS = ["HIDDEN_funding_buckets", "HIDDEN_Industry (Apollo.io)"];
 
+  // Overrides the displayed label for a column wherever it shows up (table header
+  // or filter group label) without touching the actual sheet column name — useful
+  // for columns like HIDDEN_funding_buckets that need an internal name but a
+  // friendlier public-facing one. Key = exact column name (case-insensitive match
+  // is fine), value = the label to display instead.
+  const COLUMN_LABELS = {
+    "HIDDEN_funding_buckets": "Total funding raised (PitchBook)",
+    "HIDDEN_Industry (Apollo.io)": "Industry (Apollo.io)"
+  };
+
   // Numeric columns to group into range "buckets" instead of listing every unique value. 
   // Key = exact column name (case-sensitive, must match your sheet header), value = bucket size. 
   // e.g. "visibility": 20 turns 76, 42, 11, 99... into pills labeled 0–20, 21–40, 41–60, 61–80, 81–100 
@@ -355,7 +365,7 @@
 
   // <!-- PILL FILTER COLORS: cycles through these, one color per filter column -->
   const PILL_PALETTE = ["#0D6B98", "#03E26D", "#084867"];
-  
+
   // --------------------------------------------------------------
 
   // Looks up a column's config value (e.g. in CUSTOM_PILL_ORDER, STATUS_COLORS)
@@ -495,7 +505,8 @@
   // Appends a column's label to an element as DOM nodes (never innerHTML): plain
   // text for the main name, plus an italic muted-gray span for any "(source)" suffix.
   function appendColumnLabel(el, rawCol) {
-    const { main, source } = splitColumnLabel(capitalizeFirstLetter(rawCol));
+    const override = getConfigForCol(COLUMN_LABELS, rawCol);
+    const { main, source } = override ? splitColumnLabel(override) : splitColumnLabel(capitalizeFirstLetter(rawCol));
     el.appendChild(document.createTextNode(main));
     if (source) {
       const span = document.createElement("span");
