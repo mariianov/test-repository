@@ -331,10 +331,17 @@
   const SCORE_COLOR_HIGH = { r: 8, g: 72, b: 103 }; // #084867 (lighter dark blue)
  // const SCORE_COLOR_HIGH = { r: 2, g: 35, b: 51 };    // #022333 (deep dark blue)
 
-  // <!-- SCORE COLUMN WIDTH: table uses table-layout: fixed, which splits width
-  //      evenly across columns by default. Giving the score column a smaller
-  //      fixed width here frees up extra space for the other, wider columns. -->
-  const SCORE_COLUMN_WIDTH = "70px";
+  // <!-- COLUMN WIDTHS: table uses table-layout: fixed, which splits width evenly
+  //      across columns by default. Set a fixed width here for any column that
+  //      should be just wide enough to keep its header on one line (or, for
+  //      Status, its longest pill value). Key = exact column name (case-insensitive
+  //      match is fine), value = CSS width. Calculated from real text metrics at
+  //      14px/semibold, not guessed — recalculate if you change font-size or weight. -->
+  const COLUMN_WIDTHS = {
+    "RealLIST Score": "95px",
+    "Status": "95px",
+    "Founding year": "100px"
+  };
 
 
   // <!-- CHANGE STATUS TEXT COLORS HERE -->
@@ -625,8 +632,9 @@
     visibleColumns().forEach(col => {
       const th = document.createElement("th");
       appendColumnLabel(th, col);
-      if (col.toLowerCase() === SCORE_COLUMN.toLowerCase()) {
-        th.style.width = SCORE_COLUMN_WIDTH;
+      const fixedWidth = getConfigForCol(COLUMN_WIDTHS, col);
+      if (fixedWidth) {
+        th.style.width = fixedWidth;
       }
       th.addEventListener("click", () => {
         sortState = sortState.col === col ? { col, dir: -sortState.dir } : { col, dir: 1 };
@@ -720,7 +728,7 @@
           // <!-- LINK & CELL RENDERING ENGINE -->
           // 1. If column is 'score', map background color using our interpolation logic
           if (normalizedColName === SCORE_COLUMN.toLowerCase()) {
-            td.style.cssText = getScoreStyle(cellValue);
+            td.style.cssText = getScoreStyle(cellValue) + " text-align: center;";
             td.textContent = cellValue;
           } 
           // 2. If column is 'status', modify the text color conditionally
