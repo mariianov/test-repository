@@ -31,9 +31,9 @@
   </div>
   <div>
 
-    <!-- EDIT NOTES / CAPTION HERE / METHODOLOGY -->
+    <!-- EDIT NOTES / CAPTION HERE METHODOLOGY -->
     <p>* Data for these companies was last updated in August 2025.</p>
-    <p>By Mariia Novoselia, McKenzie Morgan, Katie Malone and Danya Henninger. &copy;2026 Technical.ly <a href="#" target="_blank">Read our methodology.</a></p>
+    <p>By XXX, . <a href="#" target="_blank">Read our methodology.</a></p>
   </div>
 </div>
 
@@ -98,31 +98,17 @@
     gap: 8px;
   }
   .fst-select {
-    --pill-color: #6b7280;
     font-size: 13px;
-    font-weight: 600;
     padding: 6px 10px;
-    border: 1.5px solid var(--pill-color);
+    border: 1px solid var(--fst-line);
     border-radius: var(--fst-radius);
     background: #fff;
     color: var(--fst-ink);
     max-width: 280px;
-    transition: background 0.15s ease, color 0.15s ease;
   }
   .fst-select:focus {
     outline: 2px solid var(--fst-accent);
     outline-offset: 1px;
-  }
-  /* Filled in once a real value (not "All") is chosen, same treatment as a selected pill */
-  .fst-select.has-value {
-    background: var(--pill-color);
-    color: #fff;
-  }
-  /* Keep the dropdown's own option list normal (dark-on-white), since browsers
-     render <option> outside of the select's own color styling anyway */
-  .fst-select option {
-    color: #1c2024;
-    background: #fff;
   }
   .fst-pill {
     --pill-color: #6b7280;
@@ -284,7 +270,7 @@
 <script>
 (function () {
   // ---------- CONFIG: edit these two lines ----------
-  const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vReGk5m2ATznsoVlIutT2ZjE-XG4SG-WGIGBe1bFj9QE8VGqRd2xmrwZxeQL54zk8YIA6nw73pYoYTQ/pub?gid=908416713&single=true&output=csv";
+  const SHEET_CSV_URL = "";
   const FILTER_COLUMNS = ["RealLIST ecosystem", "Status", "HIDDEN_funding_buckets", "HIDDEN_Industry (Apollo.io)"]; // e.g. ["category", "status"]
 
   // Columns listed here exist in your sheet and CAN be used in FILTER_COLUMNS
@@ -292,17 +278,13 @@
   // table — useful when a column is only there to power a filter and doesn't
   // need its own table column (e.g. saving horizontal space).
   // Key = exact column name (case-insensitive match is fine).
-  const HIDDEN_COLUMNS = ["HIDDEN_funding_buckets", "HIDDEN_Industry (Apollo.io)"];
+  const HIDDEN_COLUMNS = ["HIDDEN_Industry (Apollo.io)"];
 
   // Numeric columns to group into range "buckets" instead of listing every unique value. 
   // Key = exact column name (case-sensitive, must match your sheet header), value = bucket size. 
   // e.g. "visibility": 20 turns 76, 42, 11, 99... into pills labeled 0–20, 21–40, 41–60, 61–80, 81–100 
   // (generated automatically from your data).
-  // Currently unused: the funding column now comes pre-bucketed from the sheet itself
-  // (see HIDDEN_funding_buckets below), so this is left empty rather than deleted.
-  // The bucketing logic is still fully wired up — to auto-bucket a different numeric
-  // column later, just add it back here, e.g. { "Some Numeric Column": 100 }.
-  const BUCKET_FILTERS = {};
+  const BUCKET_FILTERS = { "Total funding (Pitchbook, in $000)": 250000 };
 
   // Columns listed here render as a single-select dropdown instead of pill buttons.
   // Works with plain columns OR bucketed columns (e.g. combine with BUCKET_FILTERS
@@ -310,14 +292,13 @@
   // Key = exact column name (case-insensitive match is fine).
   // To add another dropdown filter, just add its column name to this array —
   // it must also be listed in FILTER_COLUMNS above to show up at all.
-  const DROPDOWN_FILTERS = ["HIDDEN_funding_buckets", "HIDDEN_Industry (Apollo.io)"];
+  const DROPDOWN_FILTERS = ["HIDDEN_funding_buckets"];
 
   // Custom pill ordering per column, overriding the default alphabetical sort.
   // Key = exact column name (case-sensitive, must match your sheet header).
   // Values not listed here fall to the end, alphabetically among themselves.
   const CUSTOM_PILL_ORDER = {
-    "status": ["Active", "Merger", "Acquired", "Public", "Defunct"],
-    "HIDDEN_funding_buckets": ["Under $250K", "$250K–$1M", "$1M–$5M", "$5M–$25M", "$25M–$100M", "$100M–$500M", "$500M+"]
+    "status": ["Active", "Merger", "Acquired", "Public", "Defunct"]
   };
   // ----------------------------------------------------
 
@@ -330,11 +311,6 @@
   const SCORE_COLOR_LOW = { r: 240, g: 244, b: 247 }; // #f0f4f7 (off-white blueish)
   const SCORE_COLOR_HIGH = { r: 8, g: 72, b: 103 }; // #084867 (lighter dark blue)
  // const SCORE_COLOR_HIGH = { r: 2, g: 35, b: 51 };    // #022333 (deep dark blue)
-
-  // <!-- SCORE COLUMN WIDTH: table uses table-layout: fixed, which splits width
-  //      evenly across columns by default. Giving the score column a smaller
-  //      fixed width here frees up extra space for the other, wider columns. -->
-  const SCORE_COLUMN_WIDTH = "70px";
 
 
   // <!-- CHANGE STATUS TEXT COLORS HERE -->
@@ -543,7 +519,6 @@
       if (isDropdown) {
         const select = document.createElement("select");
         select.className = "fst-select";
-        select.style.setProperty("--pill-color", color);
 
         const allOption = document.createElement("option");
         allOption.value = "";
@@ -559,7 +534,6 @@
 
         const currentVal = activeFilters[col] ? Array.from(activeFilters[col])[0] : "";
         select.value = currentVal;
-        select.classList.toggle("has-value", currentVal !== "");
 
         select.addEventListener("change", () => {
           if (select.value === "") {
@@ -567,7 +541,6 @@
           } else {
             activeFilters[col] = new Set([select.value]);
           }
-          select.classList.toggle("has-value", select.value !== "");
           currentPage = 1;
           render();
         });
@@ -625,9 +598,6 @@
     visibleColumns().forEach(col => {
       const th = document.createElement("th");
       appendColumnLabel(th, col);
-      if (col.toLowerCase() === SCORE_COLUMN.toLowerCase()) {
-        th.style.width = SCORE_COLUMN_WIDTH;
-      }
       th.addEventListener("click", () => {
         sortState = sortState.col === col ? { col, dir: -sortState.dir } : { col, dir: 1 };
         currentPage = 1;
@@ -766,7 +736,7 @@
   resetBtn.addEventListener("click", () => {
     activeFilters = {};
     filtersEl.querySelectorAll(".fst-pill.selected").forEach(p => p.classList.remove("selected"));
-    filtersEl.querySelectorAll(".fst-select").forEach(s => { s.value = ""; s.classList.remove("has-value"); });
+    filtersEl.querySelectorAll(".fst-select").forEach(s => { s.value = ""; });
     currentPage = 1;
     render();
   });
