@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>State dropdown</title>
+
+        <style>
+
+            main {
+                padding: 0 19%;
+                font-size: 18px;
+                font-family: Georgia, 'Times New Roman', Times, serif;
+                line-height: 20px;
+            }
+
+            #results-container {
+                display: flex;
+                justify-content: center;
+                margin-top: 50px;
+            }
+
+            .candidate-portrait {
+                display: block;
+                width: 200px;
+                height: 200px;
+                border-radius: 50%;
+                object-fit: cover;
+                margin-left: auto;
+                margin-right: auto;
+            }
+
+            .candidate-name {
+                font-weight: 600;
+            }
+
+
+            #results-container p {
+                padding: 0 15px;
+            }
+
+            #results-container h2 {
+                padding: 0 15px;
+            }
+
+            .text-in-light-bold {
+                font-weight: 700;
+            }
+
+
+            .yes-answer {
+                text-decoration: underline;
+                text-decoration-color: #45ba87;
+                text-decoration-thickness: 2.4px;
+            }
+
+            .no-answer {
+                text-decoration: underline;
+                text-decoration-color: #EB4C04;
+                text-decoration-thickness: 2.4px;
+            }
+
+            .text-in-italics {
+                font-style: italic;
+                font-size: 16px;
+            }
+
+            .candidate-questions {
+                padding-top: 3px;
+            }
+
+            .candidate-questions p {
+                line-height: 24px;
+            }
+
+            #candidate-2 {
+                border-left: 1px solid gray;
+            }
+
+            @media (max-width: 720px) {
+                #results-container {
+                display: block;
+            }
+
+                #candidate-2 {
+                border-left: 1px none gray;
+                border-top: 1px solid gray;
+                padding-top: 25px;
+            }
+            }
+
+        </style>
+    </head>
+
+    <body>
+        <main>
+
+            <!-- Parliament chart -->
+            
+            <div class="flourish-embed flourish-parliament" data-src="visualisation/30426087"><script src="https://public.flourish.studio/resources/embed.js"></script><noscript><img src="https://public.flourish.studio/visualisation/30426087/thumbnail" width="100%" alt="parliament visualization" /></noscript></div>
+
+            <!-- Skipping the dropdown for now, below is just how i want the results to look-->
+
+            <!-- Drop down menu-->
+
+            <div id="results-container">
+                <div id="candidate-1">
+                    <img class="candidate-portrait" src="https://sesameworkshop.org/wp-content/uploads/2023/03/presskit_ss_bio_elmo-560x420.png" alt="">
+                    <h2 class="candidate-name">Elmo</h2>
+                    <p>Political party: <span class="text-in-light-bold">Green Party</span></p>
+
+                    <div class="candidate-questions">
+                        <p>Do you like pop music? 
+                            <span class="text-in-light-bold yes-answer">Yes.</span> <br>
+                            <span class="text-in-italics">(Source: <a href="" target="_blank">Campaign website</a>)</span>
+                        </p>
+
+                        <p>Do you like rock music? 
+                            <span class="text-in-light-bold yes-answer">Yes.</span> <br>
+                            <span class="text-in-italics">(Source: Email interview)</span>
+                        </p>
+
+                        <p>Do you like jazz music? 
+                            <span class="text-in-light-bold no-answer">No.</span> <br>
+                            <span class="text-in-italics">(Source: <a href="" target="_blank">X (formerly Twitter)</a>)</span>
+                        </p>
+
+                        <p>Do you like hip-hop music? 
+                            <span class="text-in-light-bold yes-answer">Yes.</span> <br>
+                            <span class="text-in-italics">(Source: Phone call interview)</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div id="candidate-2">
+                    <img class="candidate-portrait" src="https://sesameworkshop.org/wp-content/uploads/2023/03/presskit_ss_bio_bigbird-560x420.png" alt="">
+                    <h2 class="candidate-name">Big Bird</h2>
+                    <p>Political party: <span class="text-in-light-bold">Independent</span></p>
+                   
+                    <div class="candidate-questions">
+                        <p>Do you like pop music? 
+                            <span class="text-in-light-bold no-answer">No.</span> <br>
+                            <span class="text-in-italics">(Source: <a href="" target="_blank">X (formerly Twitter)</a>)</span>
+                        </p>
+
+                        <p>Do you like rock music? 
+                            <span class="text-in-light-bold no-answer">No.</span> <br>
+                            <span class="text-in-italics">(Source: Phone call interview)</span>
+                        </p>
+
+                        <p>Do you like jazz music? 
+                            <span class="text-in-light-bold yes-answer">Yes.</span> <br>
+                            <span class="text-in-italics">(Source: Email interview)</span>
+                        </p>
+
+                        <p>Do you like hip-hop music? 
+                            <span class="text-in-light-bold no-answer">No.</span> <br>
+                            <span class="text-in-italics">(Source: <a href="" target="_blank">Campaign website</a>)</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+    </body>
+</html>
