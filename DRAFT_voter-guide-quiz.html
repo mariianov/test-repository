@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&display=swap" rel="stylesheet">
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        #sq-main-container {
+            background-color: #d3bee8;
+            width: 92%;
+            max-width: 700px;
+            margin: 20px auto;
+            padding: 16px;
+            font-family: Arial, sans-serif;
+            font-size: 1rem;
+            border-radius: 8px;
+        }
+
+        #sq-main-container .sq-hidden {
+            display: none;
+          /*
+            background-color: #9b8ea8;
+            background-color: #b097c1;
+            background-color: #e5dbeb;
+            background-color: #532177;
+            background-color: #7b5497;
+            background-color: #603282;
+            background-color: #cab9d6;
+            */
+        }
+
+        #sq-main-container #sq-path-title {
+            margin-top: 0;
+        }
+
+        /* Centered Path Selection Screen Buttons */
+        #sq-path-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        #sq-main-container .sq-statement-block {
+            margin-bottom: 16px;
+            padding: 16px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        #sq-main-container button {
+            padding: 10px 14px;
+            margin: 0;
+            font-size: 1rem;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-family: "Fira Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            border: 1px solid #413C58;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+        }
+
+        #sq-main-container .sq-result-details li {
+            margin-bottom: 10px;
+        }
+
+        #sq-main-container .sq-path-btn {
+            min-width: 200px;
+        }
+
+        #sq-main-container .sq-path-btn:hover {
+            background-color: #413C58;
+            color: #ffffff;
+            border-color: #413C58;
+        }
+
+        /* Spacing for answer buttons */
+        #sq-main-container .sq-answer-btn {
+            width: 100%;
+            margin: 3px 0;
+            font-family: "Fira Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        }
+
+        /* Purple hover and selected state for answer buttons */
+        #sq-main-container .sq-answer-btn:hover:not(:disabled),
+        #sq-main-container .sq-answer-btn-selected {
+            background-color: #413C58;
+            color: #ffffff;
+            border-color: #413C58;
+        }
+
+        /* #sq-main-container .sq-answer-btn-selected {
+            font-weight: bold;
+            text-decoration: underline;
+        } */
+
+        /* Result row formatted with white background */
+        #sq-main-container .sq-result-row {
+            margin-bottom: 12px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 12px 16px;
+            text-align: left;
+        }
+
+        #sq-main-container .sq-result-toggle {
+            width: 100%;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start; /* Overrides global button centering */
+            gap: 8px;
+            text-align: left;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 0;
+            margin: 0;
+        }
+
+        /* Underline ONLY the text span on hover */
+        #sq-main-container .sq-result-toggle:hover .sq-result-text {
+            text-decoration: underline;
+        }
+
+        #sq-main-container .sq-arrow {
+            display: inline-block;
+            transition: transform 0.2s ease;
+            font-size: 1.4em;
+            line-height: 1;
+            text-decoration: none !important;
+        }
+
+        #sq-main-container .sq-arrow-open {
+            transform: rotate(90deg);
+        }
+
+        #sq-main-container .sq-result-details {
+            padding: 8px 16px;
+            text-align: left;
+        }
+
+        /* Centered Try Again button with Aqua hover */
+        #sq-main-container #sq-try-again-btn {
+            margin: 20px auto 0 auto;
+            display: flex;
+        }
+
+        #sq-main-container #sq-try-again-btn:hover {
+            background-color: #413C58;
+            border-color: #413C58;
+            color: #ffffff;
+        }
+
+        #sq-main-container .sq-statement-text {
+            font-size: 1.1rem;
+            font-weight: 400;
+            line-height: 1.4;
+            font-family: "Fira Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            color: black;
+            margin-top: 0;
+            margin-bottom: 8px;
+        }
+
+        /* Center all main headings */
+        #sq-main-container h2 {
+            font-family: "Merriweather", serif;
+            text-align: center;
+        }
+
+        #intro-text {
+          padding: 7px 15px;
+
+        }
+
+        #sq-main-container #sq-path-description {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 0 0 16px 0;
+            line-height: 1.4;
+            font-family: "Fira Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        }
+
+        /* Responsive adjustments for mobile devices */
+        @media (max-width: 480px) {
+            #sq-main-container {
+                width: 96%;
+                padding: 12px;
+                font-size: 0.95rem;
+            }
+
+            #sq-main-container button {
+                font-size: 0.95rem;
+                padding: 10px 12px;
+            }
+
+            #sq-main-container .sq-path-btn {
+                width: 100%;
+                min-width: 0;
+            }
+
+            #sq-main-container .sq-statement-text {
+                font-size: 1rem;
+            }
+
+            #sq-main-container .sq-result-toggle {
+                font-size: 0.95rem;
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <div id="sq-main-container">
+        <div id="sq-path-screen">
+            <h2>November election quiz</h2>
+            <p id="intro-text">Take our interactive quiz to learn more about what's on the ballot this November and see where you stand. 
+              Choose a race or ballot measure:</p>
+            <div id="sq-path-buttons">
+                <!-- will be automatically added through JS-->
+            </div>
+        </div>
+
+        <div id="sq-quiz-screen" class="sq-hidden">
+          <h2 id="sq-path-title"></h2>
+          <p id="sq-path-description" class="sq-hidden"></p>   <!-- NEW -->
+          <div id="sq-statement-list"></div>
+        </div>
+
+        <div id="sq-results-screen" class="sq-hidden">
+            <h2>Your results:</h2>
+            <div id="sq-results-list"></div>
+            <button id="sq-try-again-btn">Explore another race</button>
+        </div>
+
+    </div>
+
+<script>
+ 
+const paths = [
+  {
+    id: "amendment-3",
+    type: "amendment", 
+    label: "Amendment 3",
+    people: [
+      { name: "views-for", statements: ["I support this", "I support that"] }, 
+      { name: "views-against", statements: ["I don't support this", "I don't support that"]}
+    ]
+  },
+  {
+    id: "amendment-6",
+    type: "amendment", 
+    label: "Amendment 6",
+    people: [
+      { name: "views-for", statements: ["I support this", "I support that"] }, 
+      { name: "views-against", statements: ["I don't support this", "I don't support that"]}
+    ]
+  },
+  {
+    id: "amendment-7",
+    type: "amendment", 
+    label: "Amendment 7",
+    people: [
+      { name: "views-for", statements: ["I support this", "I support that"] }, 
+      { name: "views-against", statements: ["I don't support this", "I don't support that"]}
+    ]
+  },
+  {
+    id: "amendment-8",
+    type: "amendment", 
+    label: "Amendment 8",
+    people: [
+      { name: "views-for", statements: ["I support this", "I support that"] }, 
+      { name: "views-against", statements: ["I don't support this", "I don't support that"]}
+    ]
+  },
+  {
+    id: "prop-a",
+    type: "amendment", 
+    label: "Proposition A",
+    people: [
+      { name: "views-for", statements: ["I support this", "I support that"] }, 
+      { name: "views-against", statements: ["I don't support this", "I don't support that"]}
+    ]
+  },
+  {
+    id: "prop-l",
+    type: "amendment", 
+    label: "Proposition L",
+    description: "The current Boone County jail is overcrowded, with inmate population growing by 46% between 2022 and 2026. As a result, last year alone, Boone County spent $2.5 million to house its inmates in at least 14 other Missouri counties. Proposition L suggests creating a three-eighth-cent sales tax to pay for a new Boone County jail.",
+    people: [
+      { name: "views-for", statements: ["Boone County should implement a new sales tax to build a bigger jail."] }, 
+      { name: "views-against", statements: ["Boone County should avoid putting people in jail for minor and non-violent crimes to address jail overcrowding.", "Boone County should decrease the number of people detained with no-bond charges, which is when a defendant cannot pay bail to get out of jail."]}
+    ]
+  },
+  {
+    id: "us-house-dst-3",
+    label: "US House Representative, District 3",
+    people: [
+      { name: "Jim Higgins (L)", statements: ["I support this", "I support that"] },
+      { name: "Bethany Mann (D)", statements: ["I don't support this", "I don't support that"] }, 
+      { name: "Bob Onder (R)", statements: ["I support this and that", "I don't support that and this"] }
+    ]
+  },
+  {
+    id: "us-house-dst-4",
+    label: "US House Representative, District 4",
+    people: [
+      { name: "Mark Alford (R)", statements: ["I support this", "I support that"] },
+      { name: "Jordan Herrera (D)", statements: ["I don't support this", "I don't support that"] }, 
+      { name: "Thomas Holbrook (L)", statements: ["I support this and that", "I don't support that and this"]}
+    ]
+  }, 
+  {
+    id: "state-dst-44",
+    label: "Missouri State Representative, District 44",
+    people: [
+      { name: "Bekki Brewer (D)", statements: ["I support this", "I support that"] },
+      { name: "John Martin (R)", statements: ["I don't support this", "I don't support that"] }
+    ]
+  }, 
+  {
+    id: "auditor", 
+    label: "Missouri Auditor", 
+    people: [
+      { name: "Dustin Coffell (L)", statements: ["I support this", "I support that"] }, 
+      { name: "Scott Fitzpatrick (R)", statements: ["I don't support this", "I don't support that"] }, 
+      { name: "Quentin Wilson (D)", statements: ["I support this and that", "I don't support that and this"] }
+    ]
+  }
+];
+ 
+
+// Fisher-Yates shuffle. Returns a new array; does not mutate the input.
+function shuffleArray(array) {
+  const result = array.slice();
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+ 
+function getStatementsForPath(pathId) {
+  const path = paths.find(p => p.id === pathId);
+  const flatList = [];
+ 
+  path.people.forEach(person => {
+    person.statements.forEach(statement => {
+      flatList.push({ text: statement, person: person.name });
+    });
+  });
+ 
+  return shuffleArray(flatList);
+}
+ 
+const pathScreen = document.getElementById("sq-path-screen");
+const pathButtons = document.getElementById("sq-path-buttons");
+const quizScreen = document.getElementById("sq-quiz-screen");
+const pathTitle = document.getElementById("sq-path-title");
+const statementList = document.getElementById("sq-statement-list");
+const resultsScreen = document.getElementById("sq-results-screen");
+const resultsList = document.getElementById("sq-results-list");
+const tryAgainBtn = document.getElementById("sq-try-again-btn");
+const pathDescription = document.getElementById("sq-path-description");
+ 
+let currentPath = null;
+let currentStatements = [];
+let currentIndex = 0;
+let scores = {};
+let answerLog = [];
+ 
+paths.forEach(path => {
+  const btn = document.createElement("button");
+  btn.classList.add("sq-path-btn");
+  btn.textContent = path.label;
+  btn.addEventListener("click", () => startQuiz(path));
+  pathButtons.appendChild(btn);
+});
+ 
+function startQuiz(path) {
+  currentPath = path;
+  currentStatements = getStatementsForPath(path.id);
+  currentIndex = 0;
+  scores = {};
+  answerLog = [];
+  statementList.innerHTML = "";
+  resultsList.innerHTML = "";
+  resultsScreen.classList.add("sq-hidden");
+ 
+  pathTitle.textContent = path.label;
+  pathDescription.textContent = path.description || "";
+  pathDescription.classList.toggle("sq-hidden", !path.description);
+ 
+  currentStatements.forEach(statement => {
+    if (!scores[statement.person]) {
+      scores[statement.person] = {
+        agree: 0,
+        disagree: 0,
+        agreedStatements: [],
+        disagreedStatements: []
+      };
+    }
+  });
+ 
+  pathScreen.classList.add("sq-hidden");
+  quizScreen.classList.remove("sq-hidden");
+ 
+  renderStatement(currentStatements[currentIndex]);
+}
+ 
+function renderStatement(statement) {
+  const block = document.createElement("div");
+  block.classList.add("sq-statement-block");
+ 
+  const textEl = document.createElement("p");
+  textEl.classList.add("sq-statement-text");
+  textEl.textContent = statement.text;
+  block.appendChild(textEl);
+ 
+  const agreeBtn = document.createElement("button");
+  agreeBtn.classList.add("sq-answer-btn");
+  agreeBtn.textContent = "Agree";
+ 
+  const neutralBtn = document.createElement("button");
+  neutralBtn.classList.add("sq-answer-btn");
+  neutralBtn.textContent = "Neither agree nor disagree";
+ 
+  const disagreeBtn = document.createElement("button");
+  disagreeBtn.classList.add("sq-answer-btn");
+  disagreeBtn.textContent = "Disagree";
+ 
+  block.appendChild(agreeBtn);
+  block.appendChild(neutralBtn);
+  block.appendChild(disagreeBtn);
+ 
+  statementList.appendChild(block);
+ 
+  agreeBtn.addEventListener("click", () => lockInAnswer(statement, "agree", block, agreeBtn));
+  neutralBtn.addEventListener("click", () => lockInAnswer(statement, "neutral", block, neutralBtn));
+  disagreeBtn.addEventListener("click", () => lockInAnswer(statement, "disagree", block, disagreeBtn));
+}
+ 
+function lockInAnswer(statement, answerType, block, clickedBtn) {
+  answerLog.push({ text: statement.text, answer: answerType });
+  if (answerType === "agree") {
+    scores[statement.person].agree++;
+    scores[statement.person].agreedStatements.push(statement.text);
+  } else if (answerType === "disagree") {
+    scores[statement.person].disagree++;
+    scores[statement.person].disagreedStatements.push(statement.text);
+  }
+ 
+  const allButtonsInBlock = block.querySelectorAll(".sq-answer-btn");
+  allButtonsInBlock.forEach(btn => {
+    btn.disabled = true;
+  });
+ 
+  clickedBtn.classList.add("sq-answer-btn-selected");
+ 
+  currentIndex++;
+ 
+  if (currentIndex >= currentStatements.length) {
+    showResults();
+  } else {
+    renderStatement(currentStatements[currentIndex]);
+  }
+}
+ 
+function pluralize(count, singular, plural) {
+  return count === 1 ? singular : plural;
+}
+ 
+function buildStatementListHtml(statements) {
+  const items = statements.map(text => `<li>${text}</li>`).join("");
+  return `<ul>${items}</ul>`;
+}
+
+function buildAnswerLogHtml() {
+  const labels = {
+    agree: "Agree",
+    disagree: "Disagree",
+    neutral: "Neither agree nor disagree"
+  };
+
+  const items = answerLog.map(entry =>
+    `<li>"${entry.text}" <i>(${labels[entry.answer]})</i></li>`
+  ).join("");
+
+  return `<ul>${items}</ul>`;
+}
+ 
+function getResultSummaryText(personName) {
+  const personScore = scores[personName];
+ 
+  return `You agreed with ${personName} <b>${personScore.agree} ${pluralize(personScore.agree, "time", "times")}</b> and disagreed <b>${personScore.disagree} ${pluralize(personScore.disagree, "time", "times")}</b>.`;
+}
+ 
+function renderResultRow(personName) {
+  const personScore = scores[personName];
+ 
+  const row = document.createElement("div");
+  row.classList.add("sq-result-row");
+ 
+  const toggleBtn = document.createElement("button");
+  toggleBtn.classList.add("sq-result-toggle");
+  toggleBtn.innerHTML = `<span class="sq-arrow">&#9656;</span> <span class="sq-result-text">${getResultSummaryText(personName)}</span>`;
+ 
+  const arrowSpan = toggleBtn.querySelector(".sq-arrow");
+  arrowSpan.classList.add("sq-arrow-open");
+ 
+  let detailsHtml = "";
+ 
+  if (personScore.agreedStatements.length > 0) {
+    detailsHtml += `<p>Agreed:</p>${buildStatementListHtml(personScore.agreedStatements)}`;
+  }
+ 
+  if (personScore.disagreedStatements.length > 0) {
+    detailsHtml += `<p>Disagreed:</p>${buildStatementListHtml(personScore.disagreedStatements)}`;
+  }
+ 
+  const details = document.createElement("div");
+  details.classList.add("sq-result-details");
+  details.innerHTML = detailsHtml;
+ 
+  toggleBtn.addEventListener("click", () => {
+    details.classList.toggle("sq-hidden");
+    arrowSpan.classList.toggle("sq-arrow-open");
+  });
+ 
+  row.appendChild(toggleBtn);
+  row.appendChild(details);
+  resultsList.appendChild(row);
+}
+ 
+// For "amendment"-type paths: combines the views-for / views-against scores
+// into a single favor/against tally, plus the statements behind each side.
+// - Favor = agreed with views-for + disagreed with views-against
+// - Against = disagreed with views-for + agreed with views-against
+// Neutral answers on either side don't count toward favor or against.
+function getAmendmentTally() {
+  const forScore = scores["views-for"];
+  const againstScore = scores["views-against"];
+ 
+  const favorCount = forScore.agree + againstScore.disagree;
+  const againstCount = forScore.disagree + againstScore.agree;
+ 
+  const favorStatements = forScore.agreedStatements.concat(againstScore.disagreedStatements);
+  const againstStatements = forScore.disagreedStatements.concat(againstScore.agreedStatements);
+ 
+  return { favorCount, againstCount, favorStatements, againstStatements };
+}
+ 
+function renderAmendmentResultRow() {
+  const tally = getAmendmentTally();
+ 
+  const row = document.createElement("div");
+  row.classList.add("sq-result-row");
+ 
+  const toggleBtn = document.createElement("button");
+  toggleBtn.classList.add("sq-result-toggle");
+  const summaryText = `You voted <b>${tally.favorCount} ${pluralize(tally.favorCount, "time", "times")}</b> in favor of ${currentPath.label} and <b>${tally.againstCount} ${pluralize(tally.againstCount, "time", "times")}</b> against it.`;
+  toggleBtn.innerHTML = `<span class="sq-arrow">&#9656;</span> <span class="sq-result-text">${summaryText}</span>`;
+ 
+  const arrowSpan = toggleBtn.querySelector(".sq-arrow");
+  arrowSpan.classList.add("sq-arrow-open");
+ 
+  const detailsHtml = buildAnswerLogHtml();
+ 
+  const details = document.createElement("div");
+  details.classList.add("sq-result-details");
+  details.innerHTML = detailsHtml;
+ 
+  toggleBtn.addEventListener("click", () => {
+    details.classList.toggle("sq-hidden");
+    arrowSpan.classList.toggle("sq-arrow-open");
+  });
+ 
+  row.appendChild(toggleBtn);
+  row.appendChild(details);
+  resultsList.appendChild(row);
+}
+ 
+function getResultOrder() {
+  // Score-based sort, used for non-amendment paths.
+  return Object.keys(scores).sort((nameA, nameB) => {
+    const a = scores[nameA];
+    const b = scores[nameB];
+ 
+    if (b.agree !== a.agree) return b.agree - a.agree;
+    if (a.disagree !== b.disagree) return a.disagree - b.disagree;
+    return nameA.localeCompare(nameB);
+  });
+}
+ 
+function showResults() {
+  resultsScreen.classList.remove("sq-hidden");
+ 
+  if (currentPath.type === "amendment") {
+    renderAmendmentResultRow();
+    return;
+  }
+ 
+  const orderedNames = getResultOrder();
+ 
+  orderedNames.forEach(personName => {
+    renderResultRow(personName);
+  });
+}
+ 
+function resetToPathSelection() {
+  currentPath = null;
+  currentStatements = [];
+  currentIndex = 0;
+  scores = {};
+  answerLog = [];
+ 
+  statementList.innerHTML = "";
+  resultsList.innerHTML = "";
+  pathTitle.textContent = "";
+
+  pathDescription.textContent = "";
+  pathDescription.classList.add("sq-hidden");
+ 
+  resultsScreen.classList.add("sq-hidden");
+  quizScreen.classList.add("sq-hidden");
+  pathScreen.classList.remove("sq-hidden");
+}
+ 
+tryAgainBtn.addEventListener("click", resetToPathSelection);
+ 
+</script>
+
+</body>
+
+</html>
